@@ -1,0 +1,7 @@
+{
+  "name": "HA Power Control",
+  "render_readme": true,
+  "homeassistant": "2026.4.0",
+  "iot_class": "Local Polling",
+  "domains": ["sensor", "binary_sensor", "switch", "number", "select", "button"]
+}

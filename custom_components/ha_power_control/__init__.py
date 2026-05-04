@@ -1,0 +1,1 @@
+"""HA Power Control integration."""

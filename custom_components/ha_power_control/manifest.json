@@ -1,0 +1,14 @@
+{
+  "domain": "ha_power_control",
+  "name": "HA Power Control",
+  "version": "0.1.0",
+  "documentation": "https://github.com/peter/ha-power-control",
+  "issue_tracker": "https://github.com/peter/ha-power-control/issues",
+  "config_flow": true,
+  "iot_class": "local_polling",
+  "integration_type": "service",
+  "requirements": ["holidays>=0.50", "pyyaml>=6.0"],
+  "after_dependencies": ["recorder"],
+  "dependencies": [],
+  "codeowners": ["@peter"]
+}
