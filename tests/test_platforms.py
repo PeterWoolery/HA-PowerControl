@@ -75,3 +75,81 @@ async def test_setup_creates_expected_sensor_entities(hass: HomeAssistant) -> No
     ]
     for eid in expected:
         assert hass.states.get(eid) is not None, f"missing {eid}"
+
+
+async def test_setup_creates_expected_binary_sensor_entities(hass: HomeAssistant) -> None:
+    _seed(hass)
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_NET_W: "sensor.eagle_200_meter_power_demand",
+            CONF_NET_IMPORT_KWH: "sensor.eagle_200_total_meter_energy_delivered",
+            CONF_NET_EXPORT_KWH: "sensor.eagle_200_total_meter_energy_received",
+            CONF_CLIMATE: "climate.thermostat",
+            CONF_INDOOR_TEMPS: ["sensor.bedroom_temperature"],
+            CONF_NET_W_SIGN: 1,
+        },
+    )
+    entry.add_to_hass(hass)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    expected = [
+        "binary_sensor.ha_power_control_in_peak_window",
+        "binary_sensor.ha_power_control_climate_healthy",
+        "binary_sensor.ha_power_control_owns_climate",
+        "binary_sensor.ha_power_control_battery_charging",
+        "binary_sensor.ha_power_control_battery_discharging",
+    ]
+    for eid in expected:
+        assert hass.states.get(eid) is not None, f"missing {eid}"
+
+
+async def test_binary_sensor_owns_climate_always_off(hass: HomeAssistant) -> None:
+    """OwnsClimateBinary is always False in P1."""
+    _seed(hass)
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_NET_W: "sensor.eagle_200_meter_power_demand",
+            CONF_NET_IMPORT_KWH: "sensor.eagle_200_total_meter_energy_delivered",
+            CONF_NET_EXPORT_KWH: "sensor.eagle_200_total_meter_energy_received",
+            CONF_CLIMATE: "climate.thermostat",
+            CONF_INDOOR_TEMPS: ["sensor.bedroom_temperature"],
+            CONF_NET_W_SIGN: 1,
+        },
+    )
+    entry.add_to_hass(hass)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    state = hass.states.get("binary_sensor.ha_power_control_owns_climate")
+    assert state is not None
+    assert state.state == "off"
+
+
+async def test_binary_sensor_climate_healthy_with_heat_cool(hass: HomeAssistant) -> None:
+    """ClimateHealthyBinary is on when thermostat is in heat_cool with target_high set."""
+    _seed(hass)
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_NET_W: "sensor.eagle_200_meter_power_demand",
+            CONF_NET_IMPORT_KWH: "sensor.eagle_200_total_meter_energy_delivered",
+            CONF_NET_EXPORT_KWH: "sensor.eagle_200_total_meter_energy_received",
+            CONF_CLIMATE: "climate.thermostat",
+            CONF_INDOOR_TEMPS: ["sensor.bedroom_temperature"],
+            CONF_NET_W_SIGN: 1,
+        },
+    )
+    entry.add_to_hass(hass)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    # Thermostat seeded as heat_cool with target_high=76.0 → should be on
+    state = hass.states.get("binary_sensor.ha_power_control_climate_healthy")
+    assert state is not None
+    assert state.state == "on"
