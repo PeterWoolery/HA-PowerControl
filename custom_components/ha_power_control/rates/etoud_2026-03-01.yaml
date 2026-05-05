@@ -4,37 +4,52 @@ peak_hours: "17:00-20:00"
 peak_days: "Mon-Fri"
 holiday_set: us_federal_observed
 
+# MarchBill.pdf p.5 "Base Services Charge 29 days @ $0.79343"
 base_services_charge_per_day: 0.79343
 
 pge_delivery:
+  # MarchBill.pdf p.6, "Details of NEM Charges" table — PG&E delivery On-Peak rate
   peak_per_kwh: 0.38747
+  # MarchBill.pdf p.6, "Details of NEM Charges" table — PG&E delivery Off-Peak rate
   off_peak_per_kwh: 0.34886
 
 sjce_generation:
+  # MarchBill.pdf p.7, "Details of San Jose Clean Energy" table — SJCE generation On-Peak rate
   peak_per_kwh: 0.11324
+  # MarchBill.pdf p.7, "Details of San Jose Clean Energy" table — SJCE generation Off-Peak rate
   off_peak_per_kwh: 0.07921
 
 # NBC non-bypassable charges (NEM 2.0):
 # nbc_state_per_kwh applied to net usage (imports - exports)
 # nbc_export_per_kwh applied to gross exports (reversal credit)
+# Reverse-engineered from MarchBill.pdf line items NBC State-Mandated and NBC Net Usage Adjustment
 nbc_state_per_kwh: 0.016489
+# Reverse-engineered from MarchBill.pdf line items NBC State-Mandated and NBC Net Usage Adjustment
 nbc_export_per_kwh: 0.031715
 
 # NEM 2.0 export credit rate (PGE credits exports at avoided-cost retail rate)
+# MarchBill.pdf p.6 Generation Credit / exports_kwh
 nem_export_credit_per_kwh: 0.329449
 
-# PCIA (Power Charge Indifference Adjustment) on gross imports, 2018-vintage
+# 2018 Vintage PCIA — derived from MarchBill.pdf p.6 ($16.82 / 634.468 kWh imports = 0.02651/kWh)
+# 2018 Vintaged PCIA per MarchBill.pdf p.6, computed as <bill_amount>/<imports_kwh>
 pcia_2018_vintage_per_kwh: 0.026510
 
 # PGE franchise fee on pre-tax subtotal
+# Computed from MarchBill.pdf p.6 line items / pre-tax subtotal
 franchise_fee_pct: 0.002184
 
 # San Jose municipal taxes on pre-tax subtotal
+# Computed from MarchBill.pdf p.6 line items / pre-tax subtotal
 sj_utility_users_tax_pct: 0.05
+# Computed from MarchBill.pdf p.6 line items / pre-tax subtotal
 sj_franchise_surcharge_pct: 0.003
 
 # SJCE charges
+# Computed from MarchBill.pdf p.6 line items / pre-tax subtotal (Local UUT 5%)
 sjce_local_uut_pct: 0.05
+# MarchBill.pdf p.7 line item / imports_kwh
 energy_commission_surcharge_per_kwh: 0.000221
 
+# MarchBill.pdf p.3 "True-Up statement (06/2026)"
 trueup_month: 6

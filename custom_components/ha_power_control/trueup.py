@@ -11,6 +11,10 @@ Formula notes (derived from MarchBill.pdf 2026-03-05 to 2026-04-02):
 - Franchise fee, SJ UUT, SJ franchise all apply to the pre-tax subtotal directly (no compounding)
 """
 
+# TODO(P4): annual projection should include base_services_charge_per_day × billing_days.
+# P1's projector deliberately tracks only the variable NEM charges (matching MarchBill.pdf
+# "Monthly NEM Charges" line, which excludes the BSC).
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -117,10 +121,18 @@ def project_monthly_nem_charges(period: BillingPeriod, rt: RateTable) -> Monthly
 
 
 def project_sjce_charges(period: BillingPeriod, rt: RateTable) -> SjceCharges:
+    # MarchBill.pdf p.7 SJCE Generation On-Peak
     peak_charge = period.net_peak_kwh * rt.sjce_peak_per_kwh
+    # MarchBill.pdf p.7 SJCE Generation Off-Peak
     off_peak_charge = period.net_off_peak_kwh * rt.sjce_off_peak_per_kwh
-    sub = peak_charge + off_peak_charge
-    local_uut = max(sub, 0) * rt.sjce_local_uut_pct
+
+    # Base for local UUT; taxes floor to zero when net export makes this negative
+    sjce_pretax_subtotal = peak_charge + off_peak_charge
+
+    # MarchBill.pdf p.7 Local Utility Users Tax (5%) — applied to SJCE pretax subtotal
+    local_uut = max(sjce_pretax_subtotal, 0) * rt.sjce_local_uut_pct
+
+    # Energy Commission Surcharge applies to gross imports (not net usage) — MarchBill.pdf p.7
     ecs = period.imports_kwh * rt.energy_commission_surcharge_per_kwh
 
     return SjceCharges(

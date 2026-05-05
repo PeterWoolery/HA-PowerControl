@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from custom_components.ha_power_control.rates_loader import load_rate_table
+from custom_components.ha_power_control.rates_loader import RateTable, load_rate_table
 from custom_components.ha_power_control.trueup import (
     BillingPeriod,
     project_monthly_nem_charges,
@@ -24,7 +24,7 @@ def march_2026() -> dict:
 
 
 @pytest.fixture
-def rate_table():
+def rate_table() -> RateTable:
     return load_rate_table()
 
 
@@ -74,6 +74,22 @@ def test_sjce_off_peak_charge(march_2026, rate_table) -> None:
     assert sjce.off_peak_charge == pytest.approx(
         march_2026["expected"]["sjce_off_peak_charge"], abs=0.01
     )
+
+
+def test_negative_pretax_floors_taxes_to_zero(rate_table) -> None:
+    """When the user is a net exporter for the period, taxes don't go negative."""
+    period = BillingPeriod(
+        billing_days=29,
+        net_peak_kwh=-50.0,  # net export during peak (i.e. exports > imports)
+        net_off_peak_kwh=-200.0,  # net export off-peak
+        imports_kwh=10.0,
+        exports_kwh=260.0,
+    )
+    result = project_monthly_nem_charges(period, rate_table)
+    assert result.franchise_fee_surcharge == 0.0
+    assert result.sj_uut == 0.0
+    assert result.sj_franchise_surcharge == 0.0
+    assert result.total < 0  # user owes negative (i.e. credit balance)
 
 
 def test_cumulative_carry_forward(rate_table, march_2026) -> None:
