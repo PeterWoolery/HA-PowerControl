@@ -1,0 +1,41 @@
+title: Power Control
+views:
+  - title: Overview
+    cards:
+      - type: glance
+        title: Now
+        entities:
+          - entity: sensor.ha_power_control_net_power
+          - entity: sensor.ha_power_control_export_power
+          - entity: sensor.ha_power_control_solar_power
+          - entity: sensor.ha_power_control_mean_indoor_temperature
+          - entity: binary_sensor.ha_power_control_in_peak_window
+      - type: entities
+        title: Battery
+        entities:
+          - entity: sensor.ha_power_control_battery_soc
+          - entity: binary_sensor.ha_power_control_battery_charging
+          - entity: binary_sensor.ha_power_control_battery_discharging
+      - type: entities
+        title: Indoor Sensors
+        entities:
+          - entity: switch.ha_power_control_include_bedroom_temperature
+          - entity: switch.ha_power_control_include_elliott_temperature
+          - entity: switch.ha_power_control_include_matteson_temperature
+          - entity: switch.ha_power_control_include_thermostat_temperature
+      - type: entities
+        title: Controls
+        entities:
+          - entity: select.ha_power_control_operating_mode
+          - entity: switch.ha_power_control_dry_run
+          - entity: switch.ha_power_control_climate_override_enabled
+          - entity: number.ha_power_control_min_cool_setpoint
+          - entity: number.ha_power_control_max_cool_setpoint
+          - entity: number.ha_power_control_peak_max_indoor_temp
+          - entity: number.ha_power_control_true_up_month
+          - entity: button.ha_power_control_snapshot_state
+      - type: entities
+        title: Economics
+        entities:
+          - entity: sensor.ha_power_control_projected_true_up
+          - entity: sensor.ha_power_control_today_s_peak_savings
