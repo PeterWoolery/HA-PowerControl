@@ -1,4 +1,5 @@
 """E-TOU-D peak-window calculator (PG&E Schedule E-TOU-D)."""
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta

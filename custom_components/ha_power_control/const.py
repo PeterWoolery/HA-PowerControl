@@ -1,4 +1,5 @@
 """Constants for HA Power Control."""
+
 from __future__ import annotations
 
 DOMAIN = "ha_power_control"
@@ -9,7 +10,7 @@ DEFAULT_UPDATE_INTERVAL_S = 30
 
 # E-TOU-D tariff
 PEAK_HOUR_START = 17  # 5pm local
-PEAK_HOUR_END = 20    # 8pm local
+PEAK_HOUR_END = 20  # 8pm local
 PEAK_DAYS = (0, 1, 2, 3, 4)  # Mon-Fri (datetime.weekday())
 
 # Defaults for number/select entities

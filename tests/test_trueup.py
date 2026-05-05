@@ -1,5 +1,7 @@
 """NEM 2.0 true-up projector tests against MarchBill.pdf fixture."""
+
 from __future__ import annotations
+
 import json
 from pathlib import Path
 
@@ -63,9 +65,7 @@ def test_monthly_nem_charges_within_one_dollar(march_2026, rate_table) -> None:
 def test_sjce_peak_charge(march_2026, rate_table) -> None:
     period = _period(march_2026)
     sjce = project_sjce_charges(period, rate_table)
-    assert sjce.peak_charge == pytest.approx(
-        march_2026["expected"]["sjce_peak_charge"], abs=0.01
-    )
+    assert sjce.peak_charge == pytest.approx(march_2026["expected"]["sjce_peak_charge"], abs=0.01)
 
 
 def test_sjce_off_peak_charge(march_2026, rate_table) -> None:

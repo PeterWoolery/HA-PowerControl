@@ -10,6 +10,7 @@ Formula notes (derived from MarchBill.pdf 2026-03-05 to 2026-04-02):
 - PCIA applies to gross imports
 - Franchise fee, SJ UUT, SJ franchise all apply to the pre-tax subtotal directly (no compounding)
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -90,7 +91,14 @@ def project_monthly_nem_charges(period: BillingPeriod, rt: RateTable) -> Monthly
     pcia = period.imports_kwh * rt.pcia_per_kwh
 
     # Pre-tax subtotal; taxes apply to this base directly (no compounding)
-    pre_tax = pge_peak + pge_off_peak + nbc_net_usage_adjustment + nbc_state_mandated + generation_credit + pcia
+    pre_tax = (
+        pge_peak
+        + pge_off_peak
+        + nbc_net_usage_adjustment
+        + nbc_state_mandated
+        + generation_credit
+        + pcia
+    )
     franchise_fee = max(pre_tax, 0) * rt.franchise_fee_pct
     sj_uut = max(pre_tax, 0) * rt.sj_utility_users_tax_pct
     sj_franchise = max(pre_tax, 0) * rt.sj_franchise_surcharge_pct

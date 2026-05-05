@@ -1,4 +1,5 @@
 """Pure data models — no HA imports."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

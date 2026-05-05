@@ -1,10 +1,12 @@
 """Tests for rate-table loading."""
+
 from __future__ import annotations
+
 from datetime import date
 
 import pytest
 
-from custom_components.ha_power_control.rates_loader import RateTable, load_rate_table
+from custom_components.ha_power_control.rates_loader import load_rate_table
 
 
 def test_load_default_rate_table() -> None:

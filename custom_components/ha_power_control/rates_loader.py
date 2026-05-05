@@ -1,4 +1,5 @@
 """Load E-TOU-D + SJCE rate tables from versioned YAML fixtures."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

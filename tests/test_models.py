@@ -1,5 +1,7 @@
 """Tests for data models."""
+
 from __future__ import annotations
+
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -48,8 +50,12 @@ def test_powerstate_construction_minimal() -> None:
         solar_w=None,
         battery=None,
         climate=ClimateState(
-            current_f=70.0, target_low_f=68.0, target_high_f=76.0,
-            preset="home", hvac_mode="heat_cool", hvac_action="idle",
+            current_f=70.0,
+            target_low_f=68.0,
+            target_high_f=76.0,
+            preset="home",
+            hvac_mode="heat_cool",
+            hvac_action="idle",
         ),
         indoor_temps={"sensor.bedroom_temperature": 70.0},
         mean_indoor_f=70.0,
@@ -65,7 +71,12 @@ def test_powerstate_construction_minimal() -> None:
 
 def test_battery_state_construction() -> None:
     bs = BatteryState(
-        soc_pct=50.0, ac_in_w=0.0, ac_out_w=200.0,
-        charging=False, discharging=True, max_charge_w=1500.0, present=True,
+        soc_pct=50.0,
+        ac_in_w=0.0,
+        ac_out_w=200.0,
+        charging=False,
+        discharging=True,
+        max_charge_w=1500.0,
+        present=True,
     )
     assert bs.discharging is True
