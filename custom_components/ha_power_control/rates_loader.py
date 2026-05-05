@@ -19,7 +19,12 @@ class RateTable:
     pge_delivery_off_peak_per_kwh: float
     sjce_peak_per_kwh: float
     sjce_off_peak_per_kwh: float
-    nbc_per_kwh: float
+    # NBC non-bypassable charges split:
+    # nbc_state_per_kwh applied to net usage; nbc_export_per_kwh applied to gross exports
+    nbc_state_per_kwh: float
+    nbc_export_per_kwh: float
+    # NEM 2.0 export credit at avoided-cost retail rate
+    nem_export_credit_per_kwh: float
     pcia_per_kwh: float
     franchise_fee_pct: float
     sj_utility_users_tax_pct: float
@@ -46,7 +51,9 @@ def _parse(raw: dict) -> RateTable:
         pge_delivery_off_peak_per_kwh=float(raw["pge_delivery"]["off_peak_per_kwh"]),
         sjce_peak_per_kwh=float(raw["sjce_generation"]["peak_per_kwh"]),
         sjce_off_peak_per_kwh=float(raw["sjce_generation"]["off_peak_per_kwh"]),
-        nbc_per_kwh=float(raw["nbc_per_kwh"]),
+        nbc_state_per_kwh=float(raw["nbc_state_per_kwh"]),
+        nbc_export_per_kwh=float(raw["nbc_export_per_kwh"]),
+        nem_export_credit_per_kwh=float(raw["nem_export_credit_per_kwh"]),
         pcia_per_kwh=float(raw["pcia_2018_vintage_per_kwh"]),
         franchise_fee_pct=float(raw["franchise_fee_pct"]),
         sj_utility_users_tax_pct=float(raw["sj_utility_users_tax_pct"]),

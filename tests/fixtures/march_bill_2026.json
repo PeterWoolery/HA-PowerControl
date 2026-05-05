@@ -1,0 +1,31 @@
+{
+  "service_for": "2172 Willester Ave, San Jose CA 95124",
+  "rate_schedule": "ETOUD-XB",
+  "billing_period_start": "2026-03-05",
+  "billing_period_end": "2026-04-02",
+  "billing_days": 29,
+  "imports_kwh": 634.468,
+  "exports_kwh": 177.205,
+  "net_usage_kwh": 457.263,
+  "net_peak_kwh": 97.444,
+  "net_off_peak_kwh": 359.819,
+  "expected": {
+    "pge_net_peak_charge": 37.76,
+    "pge_net_off_peak_charge": 125.53,
+    "nbc_net_usage_adjustment": -5.62,
+    "nbc_state_mandated": 7.54,
+    "generation_credit": -58.38,
+    "pcia": 16.82,
+    "franchise_fee_surcharge": 0.27,
+    "sj_uut": 6.18,
+    "sj_franchise_surcharge": 0.37,
+    "monthly_nem_charges_total": 130.47,
+    "sjce_peak_charge": 11.03,
+    "sjce_off_peak_charge": 28.50,
+    "sjce_local_uut": 1.98,
+    "energy_commission_surcharge": 0.14,
+    "sjce_total": 41.65
+  },
+  "ytd_cumulative_balance_through_period": 1612.54,
+  "trueup_month": 6
+}

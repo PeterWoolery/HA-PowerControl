@@ -14,12 +14,27 @@ sjce_generation:
   peak_per_kwh: 0.11324
   off_peak_per_kwh: 0.07921
 
-nbc_per_kwh: 0.02475
-pcia_2018_vintage_per_kwh: 0.04
-franchise_fee_pct: 0.005
+# NBC non-bypassable charges (NEM 2.0):
+# nbc_state_per_kwh applied to net usage (imports - exports)
+# nbc_export_per_kwh applied to gross exports (reversal credit)
+nbc_state_per_kwh: 0.016489
+nbc_export_per_kwh: 0.031715
+
+# NEM 2.0 export credit rate (PGE credits exports at avoided-cost retail rate)
+nem_export_credit_per_kwh: 0.329449
+
+# PCIA (Power Charge Indifference Adjustment) on gross imports, 2018-vintage
+pcia_2018_vintage_per_kwh: 0.026510
+
+# PGE franchise fee on pre-tax subtotal
+franchise_fee_pct: 0.002184
+
+# San Jose municipal taxes on pre-tax subtotal
 sj_utility_users_tax_pct: 0.05
 sj_franchise_surcharge_pct: 0.003
+
+# SJCE charges
 sjce_local_uut_pct: 0.05
-energy_commission_surcharge_per_kwh: 0.00031
+energy_commission_surcharge_per_kwh: 0.000221
 
 trueup_month: 6
