@@ -12,3 +12,12 @@ build/
 dist/
 .adversarial-review/
 .agent/
+
+# Personal bill PDFs — sanitized fixture lives in tests/fixtures/
+MarchBill.pdf
+*Bill*.pdf
+
+# IDE / OS artifacts
+.DS_Store
+.idea/
+.vscode/
