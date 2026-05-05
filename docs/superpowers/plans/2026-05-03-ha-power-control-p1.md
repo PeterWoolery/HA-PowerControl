@@ -16,20 +16,20 @@
 | T8 — Config flow | ✅ DONE | `0e90028` | 2/2 tests; conftest patched for editable-install path issue |
 | T9 — Options flow | ✅ DONE | `f73febb` | 1/1 test; modern HA pattern (no `self.config_entry =` in `__init__`) |
 | T10 — Coordinator | ✅ DONE | `1df5b42` | 3/3 tests; kW→W normalization, exclusion toggles, climate state assembly |
-| T11 — Integration setup | ⬜ TODO | — |  |
-| T12 — Sensor platform | ⬜ TODO | — |  |
-| T13 — Binary sensor platform | ⬜ TODO | — |  |
-| T14 — Switch platform | ⬜ TODO | — |  |
-| T15 — Number + select platforms | ⬜ TODO | — |  |
-| T16 — Button platform + service | ⬜ TODO | — |  |
+| T11 — Integration setup | ✅ DONE | `6832add` | async_setup_entry, async_unload_entry, options-update listener |
+| T12 — Sensor platform | ✅ DONE | `8d9f56e` | 7 sensor entities; stubs for T13-T16 platforms added so PLATFORMS forwarding works |
+| T13 — Binary sensor platform | ✅ DONE | `48361fe` | 5 binary sensors (in_peak_window, climate_healthy, owns_climate, battery_charging/discharging) |
+| T14 — Switch platform | ✅ DONE | `b21b614` | 3 switches (per-temp inclusion, dry_run, climate_override_enabled) |
+| T15 — Number + select platforms | ✅ DONE | `0c26077` | 4 number entities + operating_mode select; write-through to options |
+| T16 — Button platform + service | ✅ DONE | `09373e9` | snapshot_state button + services.yaml descriptor |
 | T17 — Lovelace + validator | ⬜ TODO | — |  |
 | T18 — Live smoke harness | ⬜ TODO | — |  |
 | T19 — CI | ⬜ TODO | — |  |
 | T20 — README + release | ⬜ TODO | — |  |
 
-**Current state:** 46/46 tests passing, 93% line coverage. Foundation, config flow, options flow, and coordinator complete. HA-runtime tests use `pytest-homeassistant-custom-component`. No platform entities yet — that's T12 onward.
+**Current state:** 67/67 tests passing, ~95% line coverage. Full integration stack complete: foundation modules, config/options flows, coordinator, integration setup, and all 6 platforms (sensor/binary_sensor/switch/number/select/button). HA-runtime tests use `pytest-homeassistant-custom-component`.
 
-**Resuming in a fresh session:** start with T11 (`__init__.py` real setup). T11 is the integration entrypoint that wires the coordinator and forwards platform setups; T12 (sensor) is the first real entity surface.
+**Resuming in a fresh session:** start with T17 (Lovelace dashboard + in-repo validator). T18-T20 are docs/CI/release tasks.
 
 **Notes for the next implementer:**
 - Package is `holidays` not `python-holidays`.
