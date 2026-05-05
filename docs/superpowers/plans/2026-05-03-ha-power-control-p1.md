@@ -22,14 +22,14 @@
 | T14 — Switch platform | ✅ DONE | `b21b614` | 3 switches (per-temp inclusion, dry_run, climate_override_enabled) |
 | T15 — Number + select platforms | ✅ DONE | `0c26077` | 4 number entities + operating_mode select; write-through to options |
 | T16 — Button platform + service | ✅ DONE | `09373e9` | snapshot_state button + services.yaml descriptor |
-| T17 — Lovelace + validator | ⬜ TODO | — |  |
-| T18 — Live smoke harness | ⬜ TODO | — |  |
-| T19 — CI | ⬜ TODO | — |  |
-| T20 — README + release | ⬜ TODO | — |  |
+| T17 — Lovelace + validator | ✅ DONE | `266379d` | dashboard.yaml + validate.py + 10 tests |
+| T18 — Live smoke harness | ✅ DONE | `c336a64` | scripts/live_smoke.py — read-only HA REST verification |
+| T19 — CI | ✅ DONE | `0828c5b` | .github/workflows/ci.yml — Python 3.12 + ruff + pytest + validator |
+| T20 — README + release | ✅ DONE | `a933fff` | README.md, tagged `v0.1.0` (local) |
 
-**Current state:** 67/67 tests passing, ~95% line coverage. Full integration stack complete: foundation modules, config/options flows, coordinator, integration setup, and all 6 platforms (sensor/binary_sensor/switch/number/select/button). HA-runtime tests use `pytest-homeassistant-custom-component`.
+**Current state:** 🎉 **P1 COMPLETE** — 77/77 tests passing, 95.18% coverage, ruff clean, v0.1.0 tagged locally. Full HACS-installable integration with foundation modules, config/options flows, coordinator, integration setup, all 6 platforms (sensor/binary_sensor/switch/number/select/button), reference Lovelace dashboard, validator, live-smoke script, CI workflow, and README.
 
-**Resuming in a fresh session:** start with T17 (Lovelace dashboard + in-repo validator). T18-T20 are docs/CI/release tasks.
+**Next phase:** P2 (climate controller — precool + peak-hold). Write a new plan as `docs/superpowers/plans/YYYY-MM-DD-ha-power-control-p2.md` against the design spec's §6.3.
 
 **Notes for the next implementer:**
 - Package is `holidays` not `python-holidays`.
