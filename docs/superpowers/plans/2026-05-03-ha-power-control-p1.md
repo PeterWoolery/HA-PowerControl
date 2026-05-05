@@ -12,10 +12,10 @@
 | T4 — Rate loader | ✅ DONE | `dd4856a` (+`eb9a1f1`) | 5/5 tests including fallback paths |
 | T5 — True-up projector | ✅ DONE | `2177540` (+`c50c1d9`, `eb9a1f1`) | 10/10 tests; YAML rates tuned to MarchBill.pdf within $1/line |
 | T6 — Models | ✅ DONE | `f353100` | 8/8 tests |
-| T7 — Entity map | ⬜ TODO | — | Resume here in fresh session |
-| T8 — Config flow | ⬜ TODO | — |  |
-| T9 — Options flow | ⬜ TODO | — |  |
-| T10 — Coordinator | ⬜ TODO | — |  |
+| T7 — Entity map | ✅ DONE | `1908599` | 4/4 tests |
+| T8 — Config flow | ✅ DONE | `0e90028` | 2/2 tests; conftest patched for editable-install path issue |
+| T9 — Options flow | ✅ DONE | `f73febb` | 1/1 test; modern HA pattern (no `self.config_entry =` in `__init__`) |
+| T10 — Coordinator | ✅ DONE | `1df5b42` | 3/3 tests; kW→W normalization, exclusion toggles, climate state assembly |
 | T11 — Integration setup | ⬜ TODO | — |  |
 | T12 — Sensor platform | ⬜ TODO | — |  |
 | T13 — Binary sensor platform | ⬜ TODO | — |  |
@@ -27,9 +27,16 @@
 | T19 — CI | ⬜ TODO | — |  |
 | T20 — README + release | ⬜ TODO | — |  |
 
-**Current state:** 35/35 tests passing, 99.01% line coverage. Pure-Python foundation (TOU calculator, rate loader, true-up projector, models) complete and tested. No HA platform code yet.
+**Current state:** 46/46 tests passing, 93% line coverage. Foundation, config flow, options flow, and coordinator complete. HA-runtime tests use `pytest-homeassistant-custom-component`. No platform entities yet — that's T12 onward.
 
-**Resuming in a fresh session:** start with T7. The plan below has full code for every step. The implementer subagent should be told the package is `holidays` not `python-holidays`. The trueup YAML schema was extended with `nbc_state_per_kwh`, `nbc_export_per_kwh`, and `nem_export_credit_per_kwh` (split from the spec's single `nbc_per_kwh`); `RateTable` and `_parse` reflect this — see `rates_loader.py` for the canonical field set.
+**Resuming in a fresh session:** start with T11 (`__init__.py` real setup). T11 is the integration entrypoint that wires the coordinator and forwards platform setups; T12 (sensor) is the first real entity surface.
+
+**Notes for the next implementer:**
+- Package is `holidays` not `python-holidays`.
+- Trueup YAML schema extended: `nbc_state_per_kwh`, `nbc_export_per_kwh`, `nem_export_credit_per_kwh` (split from spec's single `nbc_per_kwh`).
+- `tests/conftest.py` strips an editable-install `PATH_PLACEHOLDER` from `custom_components.__path__` before HA loader runs; do not remove.
+- `OptionsFlow.__init__` should NOT set `self.config_entry` — base class provides it as a property.
+- `config_flow.py` exposes options flow via plain `@staticmethod async_get_options_flow` (no decorator).
 
 ---
 
