@@ -80,6 +80,14 @@ def _validate_climate(hass: HomeAssistant, entity_id: str) -> str | None:
 class HAPowerControlConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
+    @staticmethod
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
+        from .options_flow import HAPowerControlOptionsFlow  # lazy — avoid circular import
+
+        return HAPowerControlOptionsFlow(config_entry)
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
