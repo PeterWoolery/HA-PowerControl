@@ -1,0 +1,3 @@
+snapshot_state:
+  name: Snapshot State
+  description: Write current PowerState to /config/ha_power_control/snapshots/.

@@ -430,3 +430,80 @@ async def test_select_operating_mode_change(hass: HomeAssistant) -> None:
     assert state is not None
     assert state.state == "peak_shave_only"
     assert entry.options.get("operating_mode") == "peak_shave_only"
+
+
+# ---------------------------------------------------------------------------
+# T16: Button platform tests
+# ---------------------------------------------------------------------------
+
+
+async def test_button_entity_created(hass: HomeAssistant) -> None:
+    """Setup creates the snapshot_state button entity."""
+    _seed(hass)
+    entry = MockConfigEntry(domain=DOMAIN, data=_entry_data())
+    entry.add_to_hass(hass)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    state = hass.states.get("button.ha_power_control_snapshot_state")
+    assert state is not None
+
+
+async def test_button_press_writes_snapshot(hass: HomeAssistant, tmp_path) -> None:
+    """Pressing snapshot_state writes a JSON file to the snapshots dir."""
+    import json as _json
+
+    _seed(hass)
+    entry = MockConfigEntry(domain=DOMAIN, data=_entry_data())
+    entry.add_to_hass(hass)
+
+    # Redirect hass.config.path to tmp_path so we don't need the real FS
+    hass.config.config_dir = str(tmp_path)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    await hass.services.async_call(
+        "button",
+        "press",
+        {"entity_id": "button.ha_power_control_snapshot_state"},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    snap_dir = tmp_path / "ha_power_control" / "snapshots"
+    files = list(snap_dir.glob("snapshot_*.json"))
+    assert len(files) == 1, f"expected 1 snapshot file, got {files}"
+
+    data = _json.loads(files[0].read_text())
+    assert "ts" in data
+    assert "net_w" in data
+    assert "battery" in data
+
+
+async def test_button_press_no_data_is_noop(hass: HomeAssistant, tmp_path) -> None:
+    """Pressing snapshot_state when coordinator has no data is a safe no-op."""
+    _seed(hass)
+    entry = MockConfigEntry(domain=DOMAIN, data=_entry_data())
+    entry.add_to_hass(hass)
+
+    hass.config.config_dir = str(tmp_path)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    # Clear coordinator data to simulate unavailability
+    coord = hass.data[DOMAIN][entry.entry_id]
+    coord.data = None
+
+    await hass.services.async_call(
+        "button",
+        "press",
+        {"entity_id": "button.ha_power_control_snapshot_state"},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    snap_dir = tmp_path / "ha_power_control" / "snapshots"
+    assert not snap_dir.exists() or list(snap_dir.glob("snapshot_*.json")) == []
