@@ -301,3 +301,132 @@ async def test_include_indoor_temp_turn_off_excludes_from_mean(hass: HomeAssista
 
     coord = hass.data[_DOMAIN][entry.entry_id]
     assert coord.entity_map.included_indoor_temps["sensor.bedroom_temperature"] is False
+
+
+# ---------------------------------------------------------------------------
+# T15: Number + Select platform tests
+# ---------------------------------------------------------------------------
+
+
+async def test_number_entities_created(hass: HomeAssistant) -> None:
+    """Setup creates all four P1 number tuneables."""
+    _seed(hass)
+    entry = MockConfigEntry(domain=DOMAIN, data=_entry_data())
+    entry.add_to_hass(hass)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    expected = [
+        "number.ha_power_control_true_up_month",
+        "number.ha_power_control_min_cool_setpoint",
+        "number.ha_power_control_max_cool_setpoint",
+        "number.ha_power_control_peak_max_indoor_temp",
+    ]
+    for eid in expected:
+        assert hass.states.get(eid) is not None, f"missing {eid}"
+
+
+async def test_number_trueup_month_default(hass: HomeAssistant) -> None:
+    """True-Up Month defaults to 6 (June)."""
+    _seed(hass)
+    entry = MockConfigEntry(domain=DOMAIN, data=_entry_data())
+    entry.add_to_hass(hass)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    state = hass.states.get("number.ha_power_control_true_up_month")
+    assert state is not None
+    assert float(state.state) == 6.0
+
+
+async def test_number_min_cool_default(hass: HomeAssistant) -> None:
+    """Min Cool Setpoint defaults to 65.0 °F."""
+    _seed(hass)
+    entry = MockConfigEntry(domain=DOMAIN, data=_entry_data())
+    entry.add_to_hass(hass)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    state = hass.states.get("number.ha_power_control_min_cool_setpoint")
+    assert state is not None
+    assert float(state.state) == 65.0
+
+
+async def test_number_set_value(hass: HomeAssistant) -> None:
+    """Setting a number value persists to config entry options."""
+    _seed(hass)
+    entry = MockConfigEntry(domain=DOMAIN, data=_entry_data())
+    entry.add_to_hass(hass)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    await hass.services.async_call(
+        "number",
+        "set_value",
+        {"entity_id": "number.ha_power_control_true_up_month", "value": 9},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    state = hass.states.get("number.ha_power_control_true_up_month")
+    assert state is not None
+    assert float(state.state) == 9.0
+    # options updated
+    assert entry.options.get("trueup_month") == 9.0
+
+
+async def test_select_entity_created(hass: HomeAssistant) -> None:
+    """Setup creates the operating_mode select entity."""
+    _seed(hass)
+    entry = MockConfigEntry(domain=DOMAIN, data=_entry_data())
+    entry.add_to_hass(hass)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    state = hass.states.get("select.ha_power_control_operating_mode")
+    assert state is not None
+
+
+async def test_select_operating_mode_default(hass: HomeAssistant) -> None:
+    """OperatingModeSelect defaults to 'auto'."""
+    _seed(hass)
+    entry = MockConfigEntry(domain=DOMAIN, data=_entry_data())
+    entry.add_to_hass(hass)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    state = hass.states.get("select.ha_power_control_operating_mode")
+    assert state is not None
+    assert state.state == "auto"
+
+
+async def test_select_operating_mode_change(hass: HomeAssistant) -> None:
+    """Selecting a new mode updates state and config entry options."""
+    _seed(hass)
+    entry = MockConfigEntry(domain=DOMAIN, data=_entry_data())
+    entry.add_to_hass(hass)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    await hass.services.async_call(
+        "select",
+        "select_option",
+        {
+            "entity_id": "select.ha_power_control_operating_mode",
+            "option": "peak_shave_only",
+        },
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    state = hass.states.get("select.ha_power_control_operating_mode")
+    assert state is not None
+    assert state.state == "peak_shave_only"
+    assert entry.options.get("operating_mode") == "peak_shave_only"
