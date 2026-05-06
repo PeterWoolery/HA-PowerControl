@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -83,6 +83,8 @@ class HAPowerControlCoordinator(DataUpdateCoordinator[PowerState]):
         self.store = store
         for eid in entity_map.indoor_temp_entities:
             entity_map.included_indoor_temps.setdefault(eid, True)
+        # Sustained-export tracker for precool gate (spec §6.2 Phase 1)
+        self._export_run_started: datetime | None = None
 
     async def _async_update_data(self) -> PowerState:
         em = self.entity_map
@@ -141,11 +143,22 @@ class HAPowerControlCoordinator(DataUpdateCoordinator[PowerState]):
                 present=True,
             )
 
+        # Spec §6.2: track sustained export ≥ charge_threshold_w
+        threshold = float(self.entry.options.get("charge_threshold_w", 200.0))
+        if export_w >= threshold:
+            if self._export_run_started is None:
+                self._export_run_started = ts
+            export_run_seconds = (ts - self._export_run_started).total_seconds()
+        else:
+            self._export_run_started = None
+            export_run_seconds = 0.0
+
         in_peak = is_peak(ts)
         return PowerState(
             ts=ts,
             net_w=net_w,
             export_w=export_w,
+            export_run_seconds=export_run_seconds,
             solar_w=solar_w,
             battery=battery,
             climate=climate,
