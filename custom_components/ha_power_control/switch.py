@@ -86,16 +86,16 @@ class _PersistedFlagSwitch(_Base):
     def is_on(self) -> bool:
         return bool(self.coordinator.entry.options.get(self._option_key, self._default))
 
-    async def _persist(self, value: bool) -> None:
+    def _persist(self, value: bool) -> None:
         new_options = {**self.coordinator.entry.options, self._option_key: value}
         self.hass.config_entries.async_update_entry(self.coordinator.entry, options=new_options)
         self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        await self._persist(True)
+        self._persist(True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        await self._persist(False)
+        self._persist(False)
 
 
 class DryRunSwitch(_PersistedFlagSwitch):

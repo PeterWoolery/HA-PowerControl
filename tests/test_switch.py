@@ -97,3 +97,32 @@ async def test_climate_override_switch_persists_to_options(hass: HomeAssistant) 
         hass.config_entries.async_get_entry(entry.entry_id).options["climate_override_enabled"]
         is True
     )
+
+
+async def test_dry_run_switch_round_trips_off_then_on(hass: HomeAssistant) -> None:
+    _seed_min_states(hass)
+    entry = MockConfigEntry(domain=DOMAIN, data=_entry_data(), options={"dry_run": True})
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    # Initial: True
+    assert hass.config_entries.async_get_entry(entry.entry_id).options["dry_run"] is True
+
+    # → False
+    await hass.services.async_call(
+        "switch",
+        "turn_off",
+        {"entity_id": "switch.ha_power_control_dry_run"},
+        blocking=True,
+    )
+    assert hass.config_entries.async_get_entry(entry.entry_id).options["dry_run"] is False
+
+    # → True
+    await hass.services.async_call(
+        "switch",
+        "turn_on",
+        {"entity_id": "switch.ha_power_control_dry_run"},
+        blocking=True,
+    )
+    assert hass.config_entries.async_get_entry(entry.entry_id).options["dry_run"] is True
