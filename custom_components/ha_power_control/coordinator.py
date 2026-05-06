@@ -24,6 +24,7 @@ from .const import (
     CONF_NET_W_SIGN,
     CONF_SOLAR_W,
     DEFAULT_UPDATE_INTERVAL_S,
+    DEFAULTS,
     DOMAIN,
 )
 from .entity_map import EntityMap
@@ -144,7 +145,9 @@ class HAPowerControlCoordinator(DataUpdateCoordinator[PowerState]):
             )
 
         # Spec §6.2: track sustained export ≥ charge_threshold_w
-        threshold = float(self.entry.options.get("charge_threshold_w", 200.0))
+        threshold = float(
+            self.entry.options.get("charge_threshold_w", DEFAULTS["charge_threshold_w"])
+        )
         if export_w >= threshold:
             if self._export_run_started is None:
                 self._export_run_started = ts
