@@ -84,3 +84,80 @@ def test_decide_noop_when_climate_override_disabled() -> None:
 def test_decide_noop_when_climate_unhealthy() -> None:
     out = decide(_inputs(climate_hvac_mode="cool"))  # not heat_cool
     assert out.kind == ActionKind.NOOP
+
+
+def test_precool_starts_when_all_gates_pass() -> None:
+    inp = _inputs(
+        export_w=300.0,
+        export_run_seconds=700.0,  # > 10 min
+        mean_indoor_f=78.0,  # warm enough
+        seconds_until_peak_start=30 * 60,  # 30 min until peak (within precool_lead_min=60)
+    )
+    out = decide(inp)
+    assert out.kind == ActionKind.PRECOOL_START
+    assert out.target_high_f == 76.0 - 4.0  # captured.target_high - precool_offset
+    assert out.next_persisted["precool_active"] is True
+    assert out.next_persisted["precool_ran_this_cycle"] is True
+    assert out.next_persisted["captured_originals"] == {
+        "target_high_f": 76.0,
+        "target_low_f": 68.0,
+        "preset": "home",
+        "captured_at": _now().isoformat(),
+    }
+
+
+def test_precool_skipped_when_export_run_too_short() -> None:
+    inp = _inputs(
+        export_w=300.0,
+        export_run_seconds=300.0,  # only 5 min — fails ≥10 min gate
+        mean_indoor_f=78.0,
+        seconds_until_peak_start=30 * 60,
+    )
+    assert decide(inp).kind == ActionKind.NOOP
+
+
+def test_precool_skipped_when_too_early_for_peak() -> None:
+    inp = _inputs(
+        export_w=300.0,
+        export_run_seconds=700.0,
+        mean_indoor_f=78.0,
+        seconds_until_peak_start=4 * 60 * 60,  # 4h out — outside 60-min window
+    )
+    assert decide(inp).kind == ActionKind.NOOP
+
+
+def test_precool_skipped_when_indoor_already_cool() -> None:
+    inp = _inputs(
+        export_w=300.0,
+        export_run_seconds=700.0,
+        mean_indoor_f=70.0,  # below peak_max_temp_f − precool_offset = 76
+        seconds_until_peak_start=30 * 60,
+    )
+    assert decide(inp).kind == ActionKind.NOOP
+
+
+def test_precool_skipped_during_sleep_window() -> None:
+    sleep_ts = datetime(2026, 5, 6, 23, 0, 0, tzinfo=UTC)
+    inp = _inputs(
+        ts=sleep_ts,
+        export_w=300.0,
+        export_run_seconds=700.0,
+        mean_indoor_f=78.0,
+        seconds_until_peak_start=30 * 60,
+    )
+    assert decide(inp).kind == ActionKind.NOOP
+
+
+def test_precool_skipped_when_dry_run_on() -> None:
+    opts = _options_default()
+    opts["dry_run"] = True
+    inp = _inputs(
+        export_w=300.0,
+        export_run_seconds=700.0,
+        mean_indoor_f=78.0,
+        seconds_until_peak_start=30 * 60,
+        options=opts,
+    )
+    # Dry-run is enforced by the runner, not the policy. Policy still emits the
+    # action; runner is responsible for the gate. This test pins that contract.
+    assert decide(inp).kind == ActionKind.PRECOOL_START

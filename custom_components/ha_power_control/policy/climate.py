@@ -60,6 +60,28 @@ def _in_sleep_window(ts: datetime, start_h: int, end_h: int) -> bool:
     return h >= start_h or h < end_h
 
 
+def _precool_gates_pass(inp: ClimateInputs) -> bool:
+    o = inp.options
+    p = inp.persisted
+
+    if p.get("precool_active") or p.get("peak_hold_active"):
+        return False  # already in cycle
+    if inp.in_peak_window:
+        return False  # too late
+    if inp.export_w < o["charge_threshold_w"]:
+        return False
+    if inp.export_run_seconds < 600:  # 10 min
+        return False
+    lead_s = o["precool_lead_min"] * 60
+    if not (0 < inp.seconds_until_peak_start <= lead_s):
+        return False
+    if inp.mean_indoor_f is None:
+        return False
+    if inp.mean_indoor_f <= o["peak_max_temp_f"] - o["precool_offset_f"]:
+        return False
+    return not _in_sleep_window(inp.ts, o["sleep_start_h"], o["sleep_end_h"])
+
+
 def decide(inp: ClimateInputs) -> Action:
     """Return the Action the runner should execute this tick."""
     persisted = dict(inp.persisted)
@@ -72,6 +94,24 @@ def decide(inp: ClimateInputs) -> Action:
     if not _is_healthy(inp):
         return Action(
             kind=ActionKind.NOOP, next_persisted=persisted, log_reason="climate_unhealthy"
+        )
+
+    if _precool_gates_pass(inp):
+        captured = {
+            "target_high_f": inp.climate_target_high_f,
+            "target_low_f": inp.climate_target_low_f,
+            "preset": inp.climate_preset,
+            "captured_at": inp.ts.isoformat(),
+        }
+        new_high = inp.climate_target_high_f - inp.options["precool_offset_f"]
+        persisted["captured_originals"] = captured
+        persisted["precool_active"] = True
+        persisted["precool_ran_this_cycle"] = True
+        return Action(
+            kind=ActionKind.PRECOOL_START,
+            target_high_f=new_high,
+            next_persisted=persisted,
+            log_reason="precool_gates_passed",
         )
 
     return Action(kind=ActionKind.NOOP, next_persisted=persisted, log_reason="idle")
