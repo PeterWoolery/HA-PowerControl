@@ -151,6 +151,22 @@ def decide(inp: ClimateInputs) -> Action:
 
     # Peak-hold steady-state: already in hold — T7 handles restore at peak end.
     if inp.in_peak_window and persisted.get("peak_hold_active"):
+        if (
+            inp.mean_indoor_f is not None
+            and inp.mean_indoor_f > inp.options["peak_max_temp_f"]
+            and captured is not None
+        ):
+            persisted["peak_hold_active"] = False
+            persisted["precool_active"] = False
+            persisted["precool_ran_this_cycle"] = False
+            persisted["captured_originals"] = None
+            return Action(
+                kind=ActionKind.RESTORE,
+                target_high_f=captured["target_high_f"],
+                preset=captured["preset"],
+                next_persisted=persisted,
+                log_reason="hard_exit_temp_above_ceiling",
+            )
         return Action(
             kind=ActionKind.NOOP,
             next_persisted=persisted,

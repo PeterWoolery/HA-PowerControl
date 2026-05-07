@@ -272,3 +272,22 @@ def test_precool_aborts_when_sleep_window_starts() -> None:
     )
     out = decide(inp)
     assert out.kind == ActionKind.RESTORE
+
+
+def test_peak_hold_aborts_when_indoor_exceeds_ceiling() -> None:
+    persisted = _persisted_empty()
+    persisted["peak_hold_active"] = True
+    persisted["precool_ran_this_cycle"] = True
+    persisted["captured_originals"] = {
+        "target_high_f": 76.0, "target_low_f": 68.0,
+        "preset": "home", "captured_at": _now().isoformat(),
+    }
+    inp = _inputs(
+        in_peak_window=True,
+        mean_indoor_f=82.0,  # above peak_max_temp_f=80
+        persisted=persisted,
+    )
+    out = decide(inp)
+    assert out.kind == ActionKind.RESTORE
+    assert out.target_high_f == 76.0
+    assert out.next_persisted["peak_hold_active"] is False
