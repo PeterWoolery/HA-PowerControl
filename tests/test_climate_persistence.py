@@ -142,3 +142,48 @@ async def test_restore_on_startup_when_peak_hold_active(hass) -> None:
 
     # Restore call must have fired with original target_high_f
     assert any(c.get("target_temp_high") == 76.0 for c in calls)
+
+
+async def test_owns_climate_binary_reflects_active_flag(hass) -> None:
+    _seed_min_states(hass)
+    await _seed_store(hass, {
+        "captured_originals": {
+            "target_high_f": 76.0, "target_low_f": 68.0,
+            "preset": "home", "captured_at": "2026-05-06T15:00:00+00:00",
+        },
+        "precool_active": True,
+        "peak_hold_active": False,
+        "precool_ran_this_cycle": True,
+        "last_write_record": None,
+        "cooldown_until": None,
+    })
+    # Don't restore-on-startup: dry_run blocks the write but flags persist.
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_NET_W: "sensor.eagle_200_meter_power_demand",
+            CONF_NET_IMPORT_KWH: "sensor.eagle_200_total_meter_energy_delivered",
+            CONF_NET_EXPORT_KWH: "sensor.eagle_200_total_meter_energy_received",
+            CONF_CLIMATE: "climate.thermostat",
+            CONF_INDOOR_TEMPS: ["sensor.bedroom_temperature"],
+            CONF_NET_W_SIGN: 1,
+        },
+        options={"dry_run": True, "climate_override_enabled": True},
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    # The startup-restore path will clear flags even in dry-run. To exercise
+    # OwnsClimate we set the flag back after setup.
+    coord = hass.data[DOMAIN][entry.entry_id]
+    await coord.store.set_climate_state({
+        "captured_originals": None, "precool_active": True, "peak_hold_active": False,
+        "precool_ran_this_cycle": True, "last_write_record": None, "cooldown_until": None,
+    })
+    await coord.async_request_refresh()
+    await hass.async_block_till_done()
+
+    state = hass.states.get("binary_sensor.ha_power_control_owns_climate")
+    assert state is not None
+    assert state.state == "on"

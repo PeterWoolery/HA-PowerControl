@@ -107,7 +107,7 @@ async def test_setup_creates_expected_binary_sensor_entities(hass: HomeAssistant
 
 
 async def test_binary_sensor_owns_climate_always_off(hass: HomeAssistant) -> None:
-    """OwnsClimateBinary is always False in P1."""
+    """OwnsClimateBinary is off when store flags are all false (default)."""
     _seed(hass)
     entry = MockConfigEntry(
         domain=DOMAIN,
