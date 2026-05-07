@@ -49,6 +49,23 @@ def _clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
 
 
+def _make_restore_action(
+    persisted: dict[str, Any],
+    captured: dict[str, Any],
+    options: dict[str, Any],
+    log_reason: str,
+) -> Action:
+    return Action(
+        kind=ActionKind.RESTORE,
+        target_high_f=_clamp(
+            captured["target_high_f"], options["min_cool_f"], options["max_cool_f"]
+        ),
+        preset=captured.get("preset"),
+        next_persisted=persisted,
+        log_reason=log_reason,
+    )
+
+
 def _parse_iso(s: str | None) -> datetime | None:
     if not s:
         return None
@@ -160,17 +177,7 @@ def decide(inp: ClimateInputs) -> Action:
         persisted["precool_active"] = False
         persisted["precool_ran_this_cycle"] = False
         persisted["captured_originals"] = None
-        return Action(
-            kind=ActionKind.RESTORE,
-            target_high_f=_clamp(
-                captured["target_high_f"],
-                inp.options["min_cool_f"],
-                inp.options["max_cool_f"],
-            ),
-            preset=captured["preset"],
-            next_persisted=persisted,
-            log_reason="peak_window_ended",
-        )
+        return _make_restore_action(persisted, captured, inp.options, "peak_window_ended")
 
     # Precool active but conditions ceased before peak start
     if persisted.get("precool_active") and not inp.in_peak_window and captured:
@@ -184,17 +191,7 @@ def decide(inp: ClimateInputs) -> Action:
             persisted["precool_active"] = False
             persisted["precool_ran_this_cycle"] = False
             persisted["captured_originals"] = None
-            return Action(
-                kind=ActionKind.RESTORE,
-                target_high_f=_clamp(
-                    captured["target_high_f"],
-                    inp.options["min_cool_f"],
-                    inp.options["max_cool_f"],
-                ),
-                preset=captured["preset"],
-                next_persisted=persisted,
-                log_reason="precool_aborted",
-            )
+            return _make_restore_action(persisted, captured, inp.options, "precool_aborted")
 
     # Cold-start mid-peak: captured_originals present but precool never ran → abandon.
     if (
@@ -205,17 +202,7 @@ def decide(inp: ClimateInputs) -> Action:
         originals = persisted["captured_originals"]
         persisted["peak_hold_active"] = False
         persisted["precool_active"] = False
-        return Action(
-            kind=ActionKind.RESTORE,
-            target_high_f=_clamp(
-                originals["target_high_f"],
-                inp.options["min_cool_f"],
-                inp.options["max_cool_f"],
-            ),
-            preset=originals["preset"],
-            next_persisted=persisted,
-            log_reason="cold_start_abandon",
-        )
+        return _make_restore_action(persisted, originals, inp.options, "cold_start_abandon")
 
     # Peak-hold steady-state: already in hold — T7 handles restore at peak end.
     if inp.in_peak_window and persisted.get("peak_hold_active"):
@@ -228,16 +215,8 @@ def decide(inp: ClimateInputs) -> Action:
             persisted["precool_active"] = False
             persisted["precool_ran_this_cycle"] = False
             persisted["captured_originals"] = None
-            return Action(
-                kind=ActionKind.RESTORE,
-                target_high_f=_clamp(
-                    captured["target_high_f"],
-                    inp.options["min_cool_f"],
-                    inp.options["max_cool_f"],
-                ),
-                preset=captured["preset"],
-                next_persisted=persisted,
-                log_reason="hard_exit_temp_above_ceiling",
+            return _make_restore_action(
+                persisted, captured, inp.options, "hard_exit_temp_above_ceiling"
             )
         return Action(
             kind=ActionKind.NOOP,

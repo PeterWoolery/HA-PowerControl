@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 
 from .const import DEFAULTS, DOMAIN, PLATFORMS
 from .coordinator import HAPowerControlCoordinator, build_entity_map
@@ -37,17 +37,19 @@ async def _maybe_restore_at_startup(
     if not options.get("climate_override_enabled", False):
         # User has disabled override; still clear stale flags so next
         # cycle starts clean — but do not write to the thermostat.
-        await store.set_climate_state({
-            "captured_originals": None,
-            "precool_active": False,
-            "peak_hold_active": False,
-            "precool_ran_this_cycle": False,
-            "last_write_record": None,
-            "cooldown_until": None,
-        })
+        await store.set_climate_state(
+            {
+                "captured_originals": None,
+                "precool_active": False,
+                "peak_hold_active": False,
+                "precool_ran_this_cycle": False,
+                "last_write_record": None,
+                "cooldown_until": None,
+            }
+        )
         return
 
-    from .policy.climate import Action, ActionKind  # local import to avoid cycle
+    from .policy.climate import _make_restore_action  # local import to avoid cycle
     from .policy.climate_runner import ClimateRunner
 
     runner = ClimateRunner(
@@ -65,16 +67,10 @@ async def _maybe_restore_at_startup(
         "last_write_record": None,
         "cooldown_until": None,
     }
-    action = Action(
-        kind=ActionKind.RESTORE,
-        target_high_f=captured["target_high_f"],
-        preset=captured.get("preset"),
-        next_persisted=cleared,
-        log_reason="startup_restore",
-    )
+    action = _make_restore_action(cleared, captured, options, "startup_restore")
     await runner.apply(
         action,
-        datetime.now(UTC),
+        dt_util.utcnow(),
         current_target_low_f=captured.get("target_low_f"),
     )
 
