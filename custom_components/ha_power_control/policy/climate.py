@@ -96,6 +96,51 @@ def decide(inp: ClimateInputs) -> Action:
             kind=ActionKind.NOOP, next_persisted=persisted, log_reason="climate_unhealthy"
         )
 
+    # Cold-start mid-peak: captured_originals present but precool never ran → abandon.
+    if (
+        inp.in_peak_window
+        and persisted.get("captured_originals")
+        and not persisted.get("precool_ran_this_cycle")
+    ):
+        originals = persisted["captured_originals"]
+        persisted["peak_hold_active"] = False
+        persisted["precool_active"] = False
+        return Action(
+            kind=ActionKind.RESTORE,
+            target_high_f=originals["target_high_f"],
+            preset=originals["preset"],
+            next_persisted=persisted,
+            log_reason="cold_start_abandon",
+        )
+
+    # Peak-hold steady-state: already in hold — T7 handles restore at peak end.
+    if inp.in_peak_window and persisted.get("peak_hold_active"):
+        return Action(
+            kind=ActionKind.NOOP,
+            next_persisted=persisted,
+            log_reason="peak_hold_steady",
+        )
+
+    # Phase 1 → 2 transition: precool was active, peak window just opened.
+    if inp.in_peak_window and persisted.get("precool_active"):
+        if not persisted.get("precool_ran_this_cycle"):
+            # Defensive: precool_active without precool_ran should not happen.
+            persisted["precool_active"] = False
+            persisted["peak_hold_active"] = False
+            return Action(
+                kind=ActionKind.RESTORE,
+                next_persisted=persisted,
+                log_reason="corrupt_state_abandon",
+            )
+        persisted["precool_active"] = False
+        persisted["peak_hold_active"] = True
+        return Action(
+            kind=ActionKind.PEAK_HOLD_START,
+            target_high_f=inp.options["peak_max_temp_f"],
+            next_persisted=persisted,
+            log_reason="peak_hold_transition",
+        )
+
     if _precool_gates_pass(inp):
         captured = {
             "target_high_f": inp.climate_target_high_f,

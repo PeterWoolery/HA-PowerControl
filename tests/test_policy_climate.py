@@ -161,3 +161,47 @@ def test_precool_skipped_when_dry_run_on() -> None:
     # Dry-run is enforced by the runner, not the policy. Policy still emits the
     # action; runner is responsible for the gate. This test pins that contract.
     assert decide(inp).kind == ActionKind.PRECOOL_START
+
+
+def test_peak_hold_starts_at_peak_when_precool_was_active() -> None:
+    persisted = _persisted_empty()
+    persisted["precool_active"] = True
+    persisted["precool_ran_this_cycle"] = True
+    persisted["captured_originals"] = {
+        "target_high_f": 76.0,
+        "target_low_f": 68.0,
+        "preset": "home",
+        "captured_at": _now().isoformat(),
+    }
+    inp = _inputs(
+        in_peak_window=True,
+        seconds_until_peak_start=0,
+        climate_target_high_f=72.0,  # currently in precool
+        persisted=persisted,
+    )
+    out = decide(inp)
+    assert out.kind == ActionKind.PEAK_HOLD_START
+    assert out.target_high_f == 80.0  # peak_max_temp_f
+    assert out.next_persisted["precool_active"] is False
+    assert out.next_persisted["peak_hold_active"] is True
+    # captured_originals MUST be preserved across the transition
+    assert out.next_persisted["captured_originals"] == persisted["captured_originals"]
+
+
+def test_peak_hold_does_not_enter_without_precool_ran_this_cycle() -> None:
+    """Cold-start mid-peak: persisted says peak_hold_active but no precool ran."""
+    persisted = _persisted_empty()
+    persisted["peak_hold_active"] = True
+    persisted["precool_ran_this_cycle"] = False  # corrupt / cold start
+    persisted["captured_originals"] = {
+        "target_high_f": 76.0,
+        "target_low_f": 68.0,
+        "preset": "home",
+        "captured_at": _now().isoformat(),
+    }
+    inp = _inputs(in_peak_window=True, seconds_until_peak_start=0, persisted=persisted)
+    out = decide(inp)
+    # Spec §6.2: abandon cycle, restore originals.
+    assert out.kind == ActionKind.RESTORE
+    assert out.next_persisted["peak_hold_active"] is False
+    assert out.next_persisted["precool_ran_this_cycle"] is False
