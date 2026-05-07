@@ -95,6 +95,4 @@ class ClimateRunner:
         }
         if target_low_f is not None:
             data["target_temp_low"] = target_low_f
-        await self._hass.services.async_call(
-            "climate", "set_temperature", data, blocking=True
-        )
+        await self._hass.services.async_call("climate", "set_temperature", data, blocking=True)

@@ -69,26 +69,36 @@ async def test_set_and_get_climate_state_round_trips(hass: HomeAssistant) -> Non
 # Task 13: Restore-on-startup tests
 # ---------------------------------------------------------------------------
 
+
 def _seed_min_states(hass) -> None:
     hass.states.async_set(
-        "sensor.eagle_200_meter_power_demand", "0",
+        "sensor.eagle_200_meter_power_demand",
+        "0",
         {"unit_of_measurement": "kW", "device_class": "power"},
     )
     hass.states.async_set(
-        "sensor.eagle_200_total_meter_energy_delivered", "0",
+        "sensor.eagle_200_total_meter_energy_delivered",
+        "0",
         {"unit_of_measurement": "kWh"},
     )
     hass.states.async_set(
-        "sensor.eagle_200_total_meter_energy_received", "0",
+        "sensor.eagle_200_total_meter_energy_received",
+        "0",
         {"unit_of_measurement": "kWh"},
     )
     hass.states.async_set(
-        "climate.thermostat", "heat_cool",
-        {"target_temp_high": 72.0, "target_temp_low": 68.0,
-         "current_temperature": 73.0, "preset_mode": "home"},
+        "climate.thermostat",
+        "heat_cool",
+        {
+            "target_temp_high": 72.0,
+            "target_temp_low": 68.0,
+            "current_temperature": 73.0,
+            "preset_mode": "home",
+        },
     )
     hass.states.async_set(
-        "sensor.bedroom_temperature", "73.0",
+        "sensor.bedroom_temperature",
+        "73.0",
         {"unit_of_measurement": "°F"},
     )
 
@@ -105,17 +115,22 @@ async def _seed_store(hass, climate_payload: dict) -> None:
 
 async def test_restore_on_startup_when_peak_hold_active(hass) -> None:
     _seed_min_states(hass)
-    await _seed_store(hass, {
-        "captured_originals": {
-            "target_high_f": 76.0, "target_low_f": 68.0,
-            "preset": "home", "captured_at": "2026-05-06T15:00:00+00:00",
+    await _seed_store(
+        hass,
+        {
+            "captured_originals": {
+                "target_high_f": 76.0,
+                "target_low_f": 68.0,
+                "preset": "home",
+                "captured_at": "2026-05-06T15:00:00+00:00",
+            },
+            "precool_active": False,
+            "peak_hold_active": True,
+            "precool_ran_this_cycle": True,
+            "last_write_record": None,
+            "cooldown_until": None,
         },
-        "precool_active": False,
-        "peak_hold_active": True,
-        "precool_ran_this_cycle": True,
-        "last_write_record": None,
-        "cooldown_until": None,
-    })
+    )
 
     calls: list[dict] = []
 
@@ -146,17 +161,22 @@ async def test_restore_on_startup_when_peak_hold_active(hass) -> None:
 
 async def test_owns_climate_binary_reflects_active_flag(hass) -> None:
     _seed_min_states(hass)
-    await _seed_store(hass, {
-        "captured_originals": {
-            "target_high_f": 76.0, "target_low_f": 68.0,
-            "preset": "home", "captured_at": "2026-05-06T15:00:00+00:00",
+    await _seed_store(
+        hass,
+        {
+            "captured_originals": {
+                "target_high_f": 76.0,
+                "target_low_f": 68.0,
+                "preset": "home",
+                "captured_at": "2026-05-06T15:00:00+00:00",
+            },
+            "precool_active": True,
+            "peak_hold_active": False,
+            "precool_ran_this_cycle": True,
+            "last_write_record": None,
+            "cooldown_until": None,
         },
-        "precool_active": True,
-        "peak_hold_active": False,
-        "precool_ran_this_cycle": True,
-        "last_write_record": None,
-        "cooldown_until": None,
-    })
+    )
     # Don't restore-on-startup: dry_run blocks the write but flags persist.
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -177,10 +197,16 @@ async def test_owns_climate_binary_reflects_active_flag(hass) -> None:
     # The startup-restore path will clear flags even in dry-run. To exercise
     # OwnsClimate we set the flag back after setup.
     coord = hass.data[DOMAIN][entry.entry_id]
-    await coord.store.set_climate_state({
-        "captured_originals": None, "precool_active": True, "peak_hold_active": False,
-        "precool_ran_this_cycle": True, "last_write_record": None, "cooldown_until": None,
-    })
+    await coord.store.set_climate_state(
+        {
+            "captured_originals": None,
+            "precool_active": True,
+            "peak_hold_active": False,
+            "precool_ran_this_cycle": True,
+            "last_write_record": None,
+            "cooldown_until": None,
+        }
+    )
     await coord.async_request_refresh()
     await hass.async_block_till_done()
 

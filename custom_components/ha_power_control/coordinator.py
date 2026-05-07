@@ -96,9 +96,7 @@ class HAPowerControlCoordinator(DataUpdateCoordinator[PowerState]):
                 hass=self.hass,
                 climate_entity=self.entity_map.climate_entity,
                 save_climate_state=self.store.set_climate_state,
-                dry_run_getter=lambda: bool(
-                    self.entry.options.get("dry_run", True)
-                ),
+                dry_run_getter=lambda: bool(self.entry.options.get("dry_run", True)),
             )
         return self._runner
 
@@ -209,7 +207,9 @@ class HAPowerControlCoordinator(DataUpdateCoordinator[PowerState]):
             )
             action = decide(inputs)
             await self._ensure_runner().apply(
-                action, ts, current_target_low_f=state.climate.target_low_f,
+                action,
+                ts,
+                current_target_low_f=state.climate.target_low_f,
             )
         except Exception:  # noqa: BLE001
             _LOGGER.exception("climate policy tick failed; coordinator continues")
