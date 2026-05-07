@@ -17,6 +17,34 @@
 
 ---
 
+## Execution status (P2 complete)
+
+All 16 tasks shipped. v0.2.0 tagged on branch `p2/climate-controller`.
+
+| Task | Commits |
+|---|---|
+| T1 — switch persistence | 00edd7e, e39b448 |
+| T2 — sustained-export tracker | 57f3a76, 2828a93 |
+| T3 — store schema | 644b41f |
+| T4 — policy scaffold | 82eeb6c, b289d0f |
+| T5 — precool entry | 724a9ea |
+| T6 — peak-hold transition | e05e757 |
+| T7 — restoration paths | 2ebc565 |
+| T8 — hard exit on temp ceiling | a3f1426 |
+| T9 — drift + cooldown | 0fb20e7 |
+| T10 — clamp | 0cfe313 |
+| T11 — runner | 32d01a0 |
+| T12 — coordinator wiring | f8ef544 |
+| T13 — startup restore | 3c9fae7 |
+| T14 — owns_climate + precool_offset | 68da2d1 |
+| T15 — e2e cycle test | 5ea429a |
+| Audit fixes (clamp + DRY + tz + magic 600 + dead branch) | 45c8e10, 2ad5483 |
+| T16 — release | ccbabdd |
+
+Final gate: 110 tests passing, 95.54% coverage, ruff clean.
+
+---
+
 ## File Structure
 
 | File | Action | Responsibility |
