@@ -45,6 +45,7 @@ def _options_default() -> dict[str, Any]:
         "sleep_start_h": 22,
         "sleep_end_h": 6,
         "precool_lead_min": 60,
+        "precool_min_export_run_s": 600,
     }
 
 

@@ -92,6 +92,10 @@ async def test_full_cycle_precool_then_peak_hold_then_restore(
 
     hass.services.async_register("climate", "set_temperature", fake_service)
 
+    # Pin hass timezone so DEFAULT_TIME_ZONE-based conversions are deterministic
+    # on any CI runner regardless of system locale.
+    await hass.config.async_set_time_zone("America/Los_Angeles")
+
     # Pre-peak Wednesday afternoon — 4:30pm LA, 30 min before peak (5pm).
     # Use tz-aware datetimes so .astimezone(DEFAULT_TIME_ZONE) is deterministic
     # regardless of the system/CI timezone.

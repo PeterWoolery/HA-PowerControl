@@ -120,7 +120,7 @@ def _precool_gates_pass(inp: ClimateInputs) -> bool:
         return False  # too late
     if inp.export_w < o["charge_threshold_w"]:
         return False
-    if inp.export_run_seconds < 600:  # 10 min
+    if inp.export_run_seconds < o["precool_min_export_run_s"]:
         return False
     lead_s = o["precool_lead_min"] * 60
     if not (0 < inp.seconds_until_peak_start <= lead_s):
@@ -182,7 +182,8 @@ def decide(inp: ClimateInputs) -> Action:
     # Precool active but conditions ceased before peak start
     if persisted.get("precool_active") and not inp.in_peak_window and captured:
         export_ok = (
-            inp.export_run_seconds >= 600 and inp.export_w >= inp.options["charge_threshold_w"]
+            inp.export_run_seconds >= inp.options["precool_min_export_run_s"]
+            and inp.export_w >= inp.options["charge_threshold_w"]
         )
         sleeping = _in_sleep_window(
             inp.ts, inp.options["sleep_start_h"], inp.options["sleep_end_h"]
@@ -225,16 +226,9 @@ def decide(inp: ClimateInputs) -> Action:
         )
 
     # Phase 1 → 2 transition: precool was active, peak window just opened.
+    # cold_start_abandon (above) already handles precool_active without
+    # precool_ran_this_cycle, so precool_ran_this_cycle is guaranteed True here.
     if inp.in_peak_window and persisted.get("precool_active"):
-        if not persisted.get("precool_ran_this_cycle"):
-            # Defensive: precool_active without precool_ran should not happen.
-            persisted["precool_active"] = False
-            persisted["peak_hold_active"] = False
-            return Action(
-                kind=ActionKind.RESTORE,
-                next_persisted=persisted,
-                log_reason="corrupt_state_abandon",
-            )
         persisted["precool_active"] = False
         persisted["peak_hold_active"] = True
         return Action(
@@ -245,7 +239,7 @@ def decide(inp: ClimateInputs) -> Action:
                 inp.options["max_cool_f"],
             ),
             next_persisted=persisted,
-            log_reason="peak_hold_transition",
+            log_reason="peak_hold_entry",
         )
 
     if _precool_gates_pass(inp):
