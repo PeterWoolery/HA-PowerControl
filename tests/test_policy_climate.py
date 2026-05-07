@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest  # noqa: F401
@@ -291,3 +291,59 @@ def test_peak_hold_aborts_when_indoor_exceeds_ceiling() -> None:
     assert out.kind == ActionKind.RESTORE
     assert out.target_high_f == 76.0
     assert out.next_persisted["peak_hold_active"] is False
+
+
+def test_drift_detected_starts_cooldown() -> None:
+    written_at = _now() - timedelta(seconds=120)  # outside grace
+    persisted = _persisted_empty()
+    persisted["precool_active"] = True
+    persisted["precool_ran_this_cycle"] = True
+    persisted["captured_originals"] = {
+        "target_high_f": 76.0, "target_low_f": 68.0,
+        "preset": "home", "captured_at": _now().isoformat(),
+    }
+    persisted["last_write_record"] = {
+        "target_high": 72.0,  # we wrote 72
+        "preset": "home",
+        "written_at": written_at.isoformat(),
+    }
+    # User has bumped thermostat to 74 — drift > 0.5°F
+    inp = _inputs(climate_target_high_f=74.0, persisted=persisted)
+    out = decide(inp)
+    assert out.kind == ActionKind.SET_COOLDOWN
+    assert out.next_persisted["cooldown_until"] is not None
+    # No write follows; precool stays active in persisted but writes suppressed.
+
+
+def test_drift_within_grace_does_not_trigger() -> None:
+    written_at = _now() - timedelta(seconds=30)  # inside drift_grace_s=60
+    persisted = _persisted_empty()
+    persisted["precool_active"] = True
+    persisted["precool_ran_this_cycle"] = True
+    persisted["captured_originals"] = {
+        "target_high_f": 76.0, "target_low_f": 68.0,
+        "preset": "home", "captured_at": _now().isoformat(),
+    }
+    persisted["last_write_record"] = {
+        "target_high": 72.0,
+        "preset": "home",
+        "written_at": written_at.isoformat(),
+    }
+    # Thermostat hasn't reflected the write yet
+    inp = _inputs(climate_target_high_f=76.0, persisted=persisted)
+    out = decide(inp)
+    assert out.kind != ActionKind.SET_COOLDOWN
+
+
+def test_cooldown_suppresses_actions() -> None:
+    cooldown_until = _now() + timedelta(minutes=10)
+    persisted = _persisted_empty()
+    persisted["cooldown_until"] = cooldown_until.isoformat()
+    inp = _inputs(
+        export_w=300.0,
+        export_run_seconds=700.0,
+        mean_indoor_f=78.0,
+        seconds_until_peak_start=30 * 60,
+        persisted=persisted,
+    )
+    assert decide(inp).kind == ActionKind.NOOP

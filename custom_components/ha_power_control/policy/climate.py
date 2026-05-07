@@ -6,7 +6,7 @@ Spec: docs/superpowers/specs/2026-05-03-ha-power-control-design.md §6.2
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import StrEnum
 from typing import Any
 
@@ -43,6 +43,34 @@ class ClimateInputs:
     seconds_until_peak_start: int
     persisted: dict[str, Any]
     options: dict[str, Any]
+
+
+def _parse_iso(s: str | None) -> datetime | None:
+    if not s:
+        return None
+    try:
+        return datetime.fromisoformat(s)
+    except ValueError:
+        return None
+
+
+def _drift_detected(inp: ClimateInputs) -> bool:
+    rec = inp.persisted.get("last_write_record")
+    if not rec:
+        return False
+    written_at = _parse_iso(rec.get("written_at"))
+    if written_at is None:
+        return False
+    grace_s = inp.options["drift_grace_s"]
+    if (inp.ts - written_at).total_seconds() < grace_s:
+        return False
+    tol = inp.options["drift_tolerance_f"]
+    high_drift = (
+        inp.climate_target_high_f is not None
+        and abs(inp.climate_target_high_f - rec["target_high"]) > tol
+    )
+    preset_drift = inp.climate_preset != rec.get("preset")
+    return high_drift or preset_drift
 
 
 def _is_healthy(inp: ClimateInputs) -> bool:
@@ -94,6 +122,29 @@ def decide(inp: ClimateInputs) -> Action:
     if not _is_healthy(inp):
         return Action(
             kind=ActionKind.NOOP, next_persisted=persisted, log_reason="climate_unhealthy"
+        )
+
+    # Cooldown gate
+    cooldown_until = _parse_iso(persisted.get("cooldown_until"))
+    if cooldown_until and inp.ts < cooldown_until:
+        return Action(kind=ActionKind.NOOP, next_persisted=persisted, log_reason="in_cooldown")
+    if cooldown_until and inp.ts >= cooldown_until:
+        persisted["cooldown_until"] = None  # cooldown elapsed; clear
+
+    # External override detection — only meaningful when we have an active
+    # cycle or have written recently. Avoids spurious cooldowns at idle.
+    has_active_cycle_or_write = (
+        persisted.get("precool_active")
+        or persisted.get("peak_hold_active")
+        or persisted.get("last_write_record") is not None
+    )
+    if has_active_cycle_or_write and _drift_detected(inp):
+        cd_min = inp.options["cooldown_min"]
+        persisted["cooldown_until"] = (inp.ts + timedelta(minutes=cd_min)).isoformat()
+        return Action(
+            kind=ActionKind.SET_COOLDOWN,
+            next_persisted=persisted,
+            log_reason="drift_detected",
         )
 
     captured = persisted.get("captured_originals")
