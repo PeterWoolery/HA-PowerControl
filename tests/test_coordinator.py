@@ -115,3 +115,39 @@ async def test_coordinator_export_when_net_w_negative(hass: HomeAssistant) -> No
     state = await coord._async_update_data()
     assert state.net_w == -2000.0
     assert state.export_w == 2000.0
+
+
+async def test_coordinator_tracks_export_run_seconds(hass: HomeAssistant) -> None:
+    _seed_states(hass, net_w_kw=-1.0)  # 1kW export
+    entry = MockConfigEntry(domain=DOMAIN, data=_entry_data())
+    entry.add_to_hass(hass)
+    em = build_entity_map(entry.data)
+    store = HAPowerControlStore(hass)
+    await store.async_load()
+    coord = HAPowerControlCoordinator(hass, entry, em, store)
+    s1 = await coord._async_update_data()
+    assert s1.export_run_seconds == 0.0
+    # Same export sustained — accumulator advances
+    s2 = await coord._async_update_data()
+    assert s2.export_run_seconds > 0.0
+
+
+async def test_coordinator_resets_export_run_when_below_threshold(
+    hass: HomeAssistant,
+) -> None:
+    _seed_states(hass, net_w_kw=-1.0)
+    entry = MockConfigEntry(domain=DOMAIN, data=_entry_data())
+    entry.add_to_hass(hass)
+    em = build_entity_map(entry.data)
+    store = HAPowerControlStore(hass)
+    await store.async_load()
+    coord = HAPowerControlCoordinator(hass, entry, em, store)
+    await coord._async_update_data()
+    # Export collapses
+    hass.states.async_set(
+        "sensor.eagle_200_meter_power_demand",
+        "0.5",
+        {"unit_of_measurement": "kW", "device_class": "power"},
+    )
+    s = await coord._async_update_data()
+    assert s.export_run_seconds == 0.0

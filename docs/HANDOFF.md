@@ -1,22 +1,24 @@
 # HA Power Control — Session Handoff
 
-**Last updated:** 2026-05-06
-**Status:** P1 shipped; ready for P2 planning.
+**Last updated:** 2026-05-07
+**Status:** P2 shipped (v0.2.0), merged to `main`. Ready for P3 planning once Delta 3 Max arrives.
 
 ---
 
 ## Where we are
 
-**v0.1.0** is tagged locally at commit `a933fff`. P1 (acquisition + monitoring + true-up + dashboard) is fully implemented:
+**v0.2.0** is tagged on `main` (formerly `master` — branch renamed as of this session). P2 (climate controller — precool + peak-hold) is fully implemented on top of P1:
 
-- 77/77 tests passing, 95.18% line coverage, ruff clean
+- 110/110 tests passing, ≥85% line coverage, ruff clean
 - HACS-installable custom integration in `custom_components/ha_power_control/`
 - All 6 platforms wired (sensor, binary_sensor, switch, number, select, button)
+- Climate policy: pure-Python `policy/climate.py` + async `policy/climate_runner.py`
+- Crash-safe cycle state via `HAPowerControlStore`
 - Reference Lovelace dashboard + in-repo validator
 - Live-smoke REST harness at `scripts/live_smoke.py`
 - GitHub Actions CI at `.github/workflows/ci.yml`
 
-**No code is running on the live HA instance yet.** The integration has not been manually installed on `192.168.1.103` — that's a recommended next step before P2 begins.
+**No code is running on the live HA instance yet.** The integration has not been manually installed on `192.168.1.103` — that's a recommended next step before P3 planning begins.
 
 ## Repo orientation (start here)
 
@@ -24,6 +26,7 @@
 |---|---|
 | `docs/superpowers/specs/2026-05-03-ha-power-control-design.md` | Full design spec — adversarial-reviewed, 19 findings addressed |
 | `docs/superpowers/plans/2026-05-03-ha-power-control-p1.md` | P1 plan with execution-status header (all ✅) |
+| `docs/superpowers/plans/2026-05-06-ha-power-control-p2.md` | P2 plan with execution-status header (all 16 tasks ✅) |
 | `README.md` | User-facing install + roadmap |
 | `tests/fixtures/march_bill_2026.json` | Sanitized PG&E bill for true-up regression tests |
 | `custom_components/ha_power_control/rates/etoud_2026-03-01.yaml` | Rate table tuned to within $1/line of MarchBill.pdf |
@@ -36,7 +39,7 @@
 
 3. **Trueup YAML schema** was extended beyond the spec: `nbc_state_per_kwh`, `nbc_export_per_kwh`, `nem_export_credit_per_kwh` (split from spec's single `nbc_per_kwh`). `RateTable` and `_parse` reflect this — see `rates_loader.py`.
 
-4. **Climate setpoint inversion safety:** P2 must ONLY manipulate `target_temp_high` (cooling threshold) on the `heat_cool` thermostat. NEVER touch `target_temp_low` — that would activate the furnace. This is enforced in the design spec §6.3 and must carry into P2 implementation.
+4. **Climate setpoint inversion safety (enforced):** `policy/climate_runner.py` writes ONLY `target_temp_high`. It explicitly passes `target_temp_low` through unchanged and NEVER modifies it. Any new climate-write code must follow the same rule — touching `target_temp_low` would activate the furnace.
 
 5. **`tests/conftest.py` strips an editable-install `PATH_PLACEHOLDER`** from `custom_components.__path__` before HA's loader runs. Don't remove this — `pytest-homeassistant-custom-component` chokes without it.
 
@@ -44,36 +47,46 @@
 
 7. **Unit normalization**: `coordinator._normalize_kw_to_w` converts kW→W based on `unit_of_measurement` attribute. Eagle 200 reports kW; some devices report W. Don't assume.
 
-## P2 — what's next
+## P2 complete
 
-**Goal:** Climate controller — precool before peak with excess solar, hold at peak ceiling during 5-8pm M-F.
+**v0.2.0** is tagged locally. P2 (climate controller — precool + peak-hold) is fully implemented:
 
-**Spec section to plan against:** `docs/superpowers/specs/2026-05-03-ha-power-control-design.md` §6.3 (climate controller).
+- 110/110 tests passing, ≥85% coverage, ruff clean
+- Pure-policy `policy/climate.py` with `decide()` + `ClimateInputs` / `Action` types
+- Async runner `policy/climate_runner.py` with dry-run gate
+- Coordinator-driven tick: sustained-export tracking → precool entry → peak-hold → restoration
+- Crash-safe: all cycle state in `HAPowerControlStore`; originals restored on startup
+- External-override detection with configurable cooldown
+- Safety bounds clamp on every setpoint write
+- New entities: `switch.dry_run`, `switch.climate_override_enabled`, `binary_sensor.owns_climate`, `number.precool_offset_f`
+- See `docs/superpowers/plans/2026-05-06-ha-power-control-p2.md` (execution-status header lists all 16 tasks ✅)
+
+## P3 — what's next
+
+**Goal:** Battery charge/discharge state machine (EcoFlow Delta 3 Max).
+
+**Spec section to plan against:** `docs/superpowers/specs/2026-05-03-ha-power-control-design.md` §6.1 (battery state machine).
+
+**Prerequisite:** Delta 3 Max hardware delivery. Do not begin P3 planning until the device is physically available and paired to Home Assistant.
 
 **Approach for the next session:**
 
-1. Use `superpowers:writing-plans` skill against the spec's §6.3 to produce `docs/superpowers/plans/2026-05-06-ha-power-control-p2.md`.
-2. P2 implementation will live in a new `policy/climate.py` module (currently the `policy/` directory is empty — spec expects it).
-3. P2 needs:
-   - Persistence of original `target_temp_high` via `HAPowerControlStore` (already in repo, currently unused beyond P1 stub).
-   - `async_track_point_in_time` anchored to peak start.
-   - `dry_run` switch (already exists from T14) gates whether climate writes actually fire.
-   - Restoration logic with crash-safe `precool_ran_this_cycle` flag (spec §6.3).
-   - `owns_climate` binary sensor (already exists from T13) updates when controller takes over.
-4. New tests should cover: precool entry/exit, peak-hold entry/exit, restoration after crash mid-cycle, user-override detection (if user changes setpoint manually, controller backs off).
+1. Confirm Delta 3 Max is connected and entities are visible in HA.
+2. Run `scripts/live_smoke.py` against the live HA to verify all P2 entities (including `binary_sensor.owns_climate`) populate correctly.
+3. Use `superpowers:writing-plans` skill against spec §6.1 to produce `docs/superpowers/plans/YYYY-MM-DD-ha-power-control-p3.md`.
+4. Dispatch subagent-driven-development against the P3 plan.
 
-**Out of scope for P2** (deferred): battery state machine (P3 — waits for Delta 3 Max delivery), ROI recommender (P4), multi-zone (P5).
+**Out of scope for P3** (deferred): ROI recommender (P4), multi-zone climate (P5).
 
 ## How to resume
 
 1. Open a fresh Claude session in `/home/peter/Projects/HA-PowerControl/`.
 2. Point it at this handoff doc.
-3. Run the writing-plans skill against the design spec to produce the P2 plan.
-4. Optionally manually install v0.1.0 on the live HA (192.168.1.103) and run `scripts/live_smoke.py` to verify entities populate before starting P2.
-5. Then dispatch subagent-driven-development against the P2 plan.
+3. Confirm Delta 3 Max is available; if not, P3 is blocked — consider installing v0.2.0 on live HA and observing P2 behavior instead.
+4. Run `scripts/live_smoke.py` to verify P2 entities on `192.168.1.103`.
 
 ## Open questions for the user (carry into next session)
 
-- Should v0.1.0 be installed on the live HA before P2 begins, or should P2 ship as v0.2.0 in one cut?
-- Is the user OK with the P2 implementer making HA `climate.set_temperature` service calls in dry_run=False mode against the live thermostat during testing? (Spec says yes with confirm-once UX, but worth re-confirming.)
-- Confirm peak window (17:00–20:00 M-F, US holidays observed) is still the operating policy — no recent PG&E rate plan changes the user is aware of.
+- Has the Delta 3 Max been delivered and connected to HA?
+- After live install of v0.2.0, do you want a smoke-test session to observe precool/peak-hold behavior before P3 begins?
+- Confirm peak window (17:00–20:00 M-F, US holidays observed) is still the operating policy — no recent PG&E rate plan changes?

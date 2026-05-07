@@ -64,14 +64,15 @@ class ClimateHealthyBinary(_Base):
 
 
 class OwnsClimateBinary(_Base):
-    """P1: always off (no climate writes yet). P2 will compute from store flags."""
+    """On when controller has captured originals or has an active cycle."""
 
     def __init__(self, c: HAPowerControlCoordinator) -> None:
         super().__init__(c, "owns_climate", "Owns Climate")
 
     @property
     def is_on(self) -> bool:
-        return False
+        cs = self.coordinator.store.get_climate_state()
+        return bool(cs.get("precool_active") or cs.get("peak_hold_active"))
 
 
 class BatteryChargingBinary(_Base):

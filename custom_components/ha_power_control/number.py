@@ -18,6 +18,7 @@ _NUMBERS = [
     ("min_cool_f", "Min Cool Setpoint", 50, 80, 0.5, "°F", NumberMode.BOX),
     ("max_cool_f", "Max Cool Setpoint", 70, 92, 0.5, "°F", NumberMode.BOX),
     ("peak_max_temp_f", "Peak Max Indoor Temp", 70, 90, 0.5, "°F", NumberMode.BOX),
+    ("precool_offset_f", "Precool Offset", 0, 8, 0.5, "°F", NumberMode.BOX),
 ]
 
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -24,6 +24,7 @@ from .const import (
     CONF_NET_W_SIGN,
     CONF_SOLAR_W,
     DEFAULT_UPDATE_INTERVAL_S,
+    DEFAULTS,
     DOMAIN,
 )
 from .entity_map import EntityMap
@@ -34,8 +35,10 @@ from .models import (
     compute_export_w,
     compute_mean_indoor_f,
 )
+from .policy.climate import ClimateInputs, decide
+from .policy.climate_runner import ClimateRunner
 from .store import HAPowerControlStore
-from .tou import is_peak
+from .tou import is_peak, seconds_until_peak_start
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -83,6 +86,19 @@ class HAPowerControlCoordinator(DataUpdateCoordinator[PowerState]):
         self.store = store
         for eid in entity_map.indoor_temp_entities:
             entity_map.included_indoor_temps.setdefault(eid, True)
+        # Sustained-export tracker for precool gate (spec §6.2 Phase 1)
+        self._export_run_started: datetime | None = None
+        self._runner: ClimateRunner | None = None
+
+    def _ensure_runner(self) -> ClimateRunner:
+        if self._runner is None:
+            self._runner = ClimateRunner(
+                hass=self.hass,
+                climate_entity=self.entity_map.climate_entity,
+                save_climate_state=self.store.set_climate_state,
+                dry_run_getter=lambda: bool(self.entry.options.get("dry_run", True)),
+            )
+        return self._runner
 
     async def _async_update_data(self) -> PowerState:
         em = self.entity_map
@@ -141,11 +157,24 @@ class HAPowerControlCoordinator(DataUpdateCoordinator[PowerState]):
                 present=True,
             )
 
+        # Spec §6.2: track sustained export ≥ charge_threshold_w
+        threshold = float(
+            self.entry.options.get("charge_threshold_w", DEFAULTS["charge_threshold_w"])
+        )
+        if export_w >= threshold:
+            if self._export_run_started is None:
+                self._export_run_started = ts
+            export_run_seconds = (ts - self._export_run_started).total_seconds()
+        else:
+            self._export_run_started = None
+            export_run_seconds = 0.0
+
         in_peak = is_peak(ts)
-        return PowerState(
+        state = PowerState(
             ts=ts,
             net_w=net_w,
             export_w=export_w,
+            export_run_seconds=export_run_seconds,
             solar_w=solar_w,
             battery=battery,
             climate=climate,
@@ -157,6 +186,35 @@ class HAPowerControlCoordinator(DataUpdateCoordinator[PowerState]):
             today_kwh_exported=0.0,
             today_peak_savings_usd=0.0,
         )
+
+        # Climate policy tick
+        try:
+            options = {**DEFAULTS, **dict(self.entry.options)}
+            inputs = ClimateInputs(
+                ts=ts,
+                export_w=state.export_w,
+                export_run_seconds=state.export_run_seconds,
+                mean_indoor_f=state.mean_indoor_f,
+                climate_current_f=state.climate.current_f,
+                climate_target_high_f=state.climate.target_high_f,
+                climate_target_low_f=state.climate.target_low_f,
+                climate_preset=state.climate.preset,
+                climate_hvac_mode=state.climate.hvac_mode,
+                in_peak_window=state.in_peak_window,
+                seconds_until_peak_start=seconds_until_peak_start(ts),
+                persisted=self.store.get_climate_state(),
+                options=options,
+            )
+            action = decide(inputs)
+            await self._ensure_runner().apply(
+                action,
+                ts,
+                current_target_low_f=state.climate.target_low_f,
+            )
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("climate policy tick failed; coordinator continues")
+
+        return state
 
 
 def build_entity_map(data: dict[str, Any]) -> EntityMap:

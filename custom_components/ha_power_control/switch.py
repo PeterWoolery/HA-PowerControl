@@ -67,45 +67,49 @@ class IncludeIndoorTempSwitch(_Base):
         await self.coordinator.async_request_refresh()
 
 
-class DryRunSwitch(_Base):
-    def __init__(self, coord: HAPowerControlCoordinator) -> None:
+class _PersistedFlagSwitch(_Base):
+    """Boolean switch whose state is persisted in entry.options[key]."""
+
+    _option_key: str
+    _default: bool
+
+    def __init__(
+        self, coord: HAPowerControlCoordinator, key: str, name: str, default: bool
+    ) -> None:
         super().__init__(coord)
-        self._attr_unique_id = f"{coord.entry.entry_id}_dry_run"
-        self._attr_name = "Dry Run"
-        self._state: bool = coord.entry.options.get("dry_run", DEFAULTS["dry_run"])
+        self._option_key = key
+        self._default = default
+        self._attr_unique_id = f"{coord.entry.entry_id}_{key}"
+        self._attr_name = name
 
     @property
     def is_on(self) -> bool:
-        return self._state
+        return bool(self.coordinator.entry.options.get(self._option_key, self._default))
+
+    def _persist(self, value: bool) -> None:
+        new_options = {**self.coordinator.entry.options, self._option_key: value}
+        self.hass.config_entries.async_update_entry(self.coordinator.entry, options=new_options)
+        self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        self._state = True
-        self.async_write_ha_state()
+        self._persist(True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        self._state = False
-        self.async_write_ha_state()
+        self._persist(False)
 
 
-class ClimateOverrideSwitch(_Base):
-    """Master enable for climate writes. Always present; default OFF in P1."""
+class DryRunSwitch(_PersistedFlagSwitch):
+    def __init__(self, coord: HAPowerControlCoordinator) -> None:
+        super().__init__(coord, "dry_run", "Dry Run", DEFAULTS["dry_run"])
+
+
+class ClimateOverrideSwitch(_PersistedFlagSwitch):
+    """Master enable for climate writes. Default OFF."""
 
     def __init__(self, coord: HAPowerControlCoordinator) -> None:
-        super().__init__(coord)
-        self._attr_unique_id = f"{coord.entry.entry_id}_climate_override_enabled"
-        self._attr_name = "Climate Override Enabled"
-        self._state: bool = coord.entry.options.get(
-            "climate_override_enabled", DEFAULTS["climate_override_enabled"]
+        super().__init__(
+            coord,
+            "climate_override_enabled",
+            "Climate Override Enabled",
+            DEFAULTS["climate_override_enabled"],
         )
-
-    @property
-    def is_on(self) -> bool:
-        return self._state
-
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        self._state = True
-        self.async_write_ha_state()
-
-    async def async_turn_off(self, **kwargs: Any) -> None:
-        self._state = False
-        self.async_write_ha_state()

@@ -1,7 +1,7 @@
 {
   "domain": "ha_power_control",
   "name": "HA Power Control",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "documentation": "https://github.com/peter/ha-power-control",
   "issue_tracker": "https://github.com/peter/ha-power-control/issues",
   "config_flow": true,

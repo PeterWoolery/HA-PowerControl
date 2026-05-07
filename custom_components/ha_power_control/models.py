@@ -33,6 +33,7 @@ class PowerState:
     ts: datetime
     net_w: float
     export_w: float
+    export_run_seconds: float  # seconds export has been ≥ charge_threshold_w
     solar_w: float | None
     battery: BatteryState | None
     climate: ClimateState

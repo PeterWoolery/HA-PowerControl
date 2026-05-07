@@ -26,6 +26,8 @@ DEFAULTS = {
     "charge_buffer_w": 100.0,
     "discharge_min_import_w": 100.0,
     "force_override_min": 60,
+    "precool_lead_min": 60,
+    "precool_min_export_run_s": 600,
     "cooldown_min": 30,
     "drift_tolerance_f": 0.5,
     "drift_grace_s": 60,

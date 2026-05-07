@@ -47,6 +47,7 @@ def test_powerstate_construction_minimal() -> None:
         ts=datetime(2026, 5, 6, 18, 0, tzinfo=TZ),
         net_w=500.0,
         export_w=0.0,
+        export_run_seconds=0.0,
         solar_w=None,
         battery=None,
         climate=ClimateState(
