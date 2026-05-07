@@ -205,3 +205,70 @@ def test_peak_hold_does_not_enter_without_precool_ran_this_cycle() -> None:
     assert out.kind == ActionKind.RESTORE
     assert out.next_persisted["peak_hold_active"] is False
     assert out.next_persisted["precool_ran_this_cycle"] is False
+
+
+def test_restore_at_peak_window_falling_edge() -> None:
+    persisted = _persisted_empty()
+    persisted["peak_hold_active"] = True
+    persisted["precool_ran_this_cycle"] = True
+    persisted["captured_originals"] = {
+        "target_high_f": 76.0,
+        "target_low_f": 68.0,
+        "preset": "home",
+        "captured_at": _now().isoformat(),
+    }
+    # Peak just ended
+    inp = _inputs(in_peak_window=False, persisted=persisted)
+    out = decide(inp)
+    assert out.kind == ActionKind.RESTORE
+    assert out.target_high_f == 76.0
+    assert out.preset == "home"
+    assert out.next_persisted["peak_hold_active"] is False
+    assert out.next_persisted["precool_active"] is False
+    assert out.next_persisted["precool_ran_this_cycle"] is False
+    assert out.next_persisted["captured_originals"] is None
+
+
+def test_precool_aborts_when_export_collapses_before_peak() -> None:
+    persisted = _persisted_empty()
+    persisted["precool_active"] = True
+    persisted["precool_ran_this_cycle"] = True
+    persisted["captured_originals"] = {
+        "target_high_f": 76.0,
+        "target_low_f": 68.0,
+        "preset": "home",
+        "captured_at": _now().isoformat(),
+    }
+    inp = _inputs(
+        export_w=0.0,  # collapsed
+        export_run_seconds=0.0,
+        in_peak_window=False,
+        seconds_until_peak_start=20 * 60,
+        persisted=persisted,
+    )
+    out = decide(inp)
+    assert out.kind == ActionKind.RESTORE
+    assert out.target_high_f == 76.0
+    assert out.next_persisted["precool_active"] is False
+
+
+def test_precool_aborts_when_sleep_window_starts() -> None:
+    persisted = _persisted_empty()
+    persisted["precool_active"] = True
+    persisted["precool_ran_this_cycle"] = True
+    persisted["captured_originals"] = {
+        "target_high_f": 76.0,
+        "target_low_f": 68.0,
+        "preset": "home",
+        "captured_at": _now().isoformat(),
+    }
+    sleep_ts = datetime(2026, 5, 6, 23, 0, 0, tzinfo=UTC)
+    inp = _inputs(
+        ts=sleep_ts,
+        export_w=300.0,
+        export_run_seconds=700.0,
+        in_peak_window=False,
+        persisted=persisted,
+    )
+    out = decide(inp)
+    assert out.kind == ActionKind.RESTORE

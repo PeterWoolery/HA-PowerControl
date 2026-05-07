@@ -96,6 +96,42 @@ def decide(inp: ClimateInputs) -> Action:
             kind=ActionKind.NOOP, next_persisted=persisted, log_reason="climate_unhealthy"
         )
 
+    captured = persisted.get("captured_originals")
+
+    # Falling edge of peak window: restore originals
+    if persisted.get("peak_hold_active") and not inp.in_peak_window and captured:
+        persisted["peak_hold_active"] = False
+        persisted["precool_active"] = False
+        persisted["precool_ran_this_cycle"] = False
+        persisted["captured_originals"] = None
+        return Action(
+            kind=ActionKind.RESTORE,
+            target_high_f=captured["target_high_f"],
+            preset=captured["preset"],
+            next_persisted=persisted,
+            log_reason="peak_window_ended",
+        )
+
+    # Precool active but conditions ceased before peak start
+    if persisted.get("precool_active") and not inp.in_peak_window and captured:
+        export_ok = (
+            inp.export_run_seconds >= 600 and inp.export_w >= inp.options["charge_threshold_w"]
+        )
+        sleeping = _in_sleep_window(
+            inp.ts, inp.options["sleep_start_h"], inp.options["sleep_end_h"]
+        )
+        if (not export_ok) or sleeping:
+            persisted["precool_active"] = False
+            persisted["precool_ran_this_cycle"] = False
+            persisted["captured_originals"] = None
+            return Action(
+                kind=ActionKind.RESTORE,
+                target_high_f=captured["target_high_f"],
+                preset=captured["preset"],
+                next_persisted=persisted,
+                log_reason="precool_aborted",
+            )
+
     # Cold-start mid-peak: captured_originals present but precool never ran → abandon.
     if (
         inp.in_peak_window
