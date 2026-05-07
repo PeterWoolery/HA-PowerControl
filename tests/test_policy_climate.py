@@ -71,6 +71,7 @@ def _inputs(**overrides) -> ClimateInputs:
 def test_decide_idle_returns_noop_when_nothing_to_do() -> None:
     out = decide(_inputs())
     assert out.kind == ActionKind.NOOP
+    assert out.log_reason == "idle"
     assert out.next_persisted == _persisted_empty()
 
 
@@ -79,11 +80,13 @@ def test_decide_noop_when_climate_override_disabled() -> None:
     opts["climate_override_enabled"] = False
     out = decide(_inputs(options=opts))
     assert out.kind == ActionKind.NOOP
+    assert out.log_reason == "override_disabled"
 
 
 def test_decide_noop_when_climate_unhealthy() -> None:
     out = decide(_inputs(climate_hvac_mode="cool"))  # not heat_cool
     assert out.kind == ActionKind.NOOP
+    assert out.log_reason == "climate_unhealthy"
 
 
 def test_precool_starts_when_all_gates_pass() -> None:
@@ -279,8 +282,10 @@ def test_peak_hold_aborts_when_indoor_exceeds_ceiling() -> None:
     persisted["peak_hold_active"] = True
     persisted["precool_ran_this_cycle"] = True
     persisted["captured_originals"] = {
-        "target_high_f": 76.0, "target_low_f": 68.0,
-        "preset": "home", "captured_at": _now().isoformat(),
+        "target_high_f": 76.0,
+        "target_low_f": 68.0,
+        "preset": "home",
+        "captured_at": _now().isoformat(),
     }
     inp = _inputs(
         in_peak_window=True,
@@ -299,8 +304,10 @@ def test_drift_detected_starts_cooldown() -> None:
     persisted["precool_active"] = True
     persisted["precool_ran_this_cycle"] = True
     persisted["captured_originals"] = {
-        "target_high_f": 76.0, "target_low_f": 68.0,
-        "preset": "home", "captured_at": _now().isoformat(),
+        "target_high_f": 76.0,
+        "target_low_f": 68.0,
+        "preset": "home",
+        "captured_at": _now().isoformat(),
     }
     persisted["last_write_record"] = {
         "target_high": 72.0,  # we wrote 72
@@ -321,8 +328,10 @@ def test_drift_within_grace_does_not_trigger() -> None:
     persisted["precool_active"] = True
     persisted["precool_ran_this_cycle"] = True
     persisted["captured_originals"] = {
-        "target_high_f": 76.0, "target_low_f": 68.0,
-        "preset": "home", "captured_at": _now().isoformat(),
+        "target_high_f": 76.0,
+        "target_low_f": 68.0,
+        "preset": "home",
+        "captured_at": _now().isoformat(),
     }
     persisted["last_write_record"] = {
         "target_high": 72.0,
@@ -369,8 +378,10 @@ def test_peak_hold_target_clamped_to_max_cool_f() -> None:
     persisted["precool_active"] = True
     persisted["precool_ran_this_cycle"] = True
     persisted["captured_originals"] = {
-        "target_high_f": 76.0, "target_low_f": 68.0,
-        "preset": "home", "captured_at": _now().isoformat(),
+        "target_high_f": 76.0,
+        "target_low_f": 68.0,
+        "preset": "home",
+        "captured_at": _now().isoformat(),
     }
     opts = _options_default()
     opts["peak_max_temp_f"] = 90.0  # above max_cool_f=82
