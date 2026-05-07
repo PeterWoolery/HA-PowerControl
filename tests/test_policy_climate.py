@@ -347,3 +347,34 @@ def test_cooldown_suppresses_actions() -> None:
         persisted=persisted,
     )
     assert decide(inp).kind == ActionKind.NOOP
+
+
+def test_target_high_clamped_to_min_cool_f() -> None:
+    """If captured original would precool below min_cool_f, clip up."""
+    inp = _inputs(
+        export_w=300.0,
+        export_run_seconds=700.0,
+        mean_indoor_f=78.0,
+        seconds_until_peak_start=30 * 60,
+        climate_target_high_f=68.0,  # already low; precool would yield 64 degrees F
+    )
+    out = decide(inp)
+    assert out.kind == ActionKind.PRECOOL_START
+    assert out.target_high_f == 65.0  # min_cool_f
+
+
+def test_peak_hold_target_clamped_to_max_cool_f() -> None:
+    """peak_max_temp_f set above max_cool_f must clip down."""
+    persisted = _persisted_empty()
+    persisted["precool_active"] = True
+    persisted["precool_ran_this_cycle"] = True
+    persisted["captured_originals"] = {
+        "target_high_f": 76.0, "target_low_f": 68.0,
+        "preset": "home", "captured_at": _now().isoformat(),
+    }
+    opts = _options_default()
+    opts["peak_max_temp_f"] = 90.0  # above max_cool_f=82
+    inp = _inputs(in_peak_window=True, persisted=persisted, options=opts)
+    out = decide(inp)
+    assert out.kind == ActionKind.PEAK_HOLD_START
+    assert out.target_high_f == 82.0  # clamped

@@ -45,6 +45,10 @@ class ClimateInputs:
     options: dict[str, Any]
 
 
+def _clamp(value: float, low: float, high: float) -> float:
+    return max(low, min(high, value))
+
+
 def _parse_iso(s: str | None) -> datetime | None:
     if not s:
         return None
@@ -157,7 +161,11 @@ def decide(inp: ClimateInputs) -> Action:
         persisted["captured_originals"] = None
         return Action(
             kind=ActionKind.RESTORE,
-            target_high_f=captured["target_high_f"],
+            target_high_f=_clamp(
+                captured["target_high_f"],
+                inp.options["min_cool_f"],
+                inp.options["max_cool_f"],
+            ),
             preset=captured["preset"],
             next_persisted=persisted,
             log_reason="peak_window_ended",
@@ -177,7 +185,11 @@ def decide(inp: ClimateInputs) -> Action:
             persisted["captured_originals"] = None
             return Action(
                 kind=ActionKind.RESTORE,
-                target_high_f=captured["target_high_f"],
+                target_high_f=_clamp(
+                    captured["target_high_f"],
+                    inp.options["min_cool_f"],
+                    inp.options["max_cool_f"],
+                ),
                 preset=captured["preset"],
                 next_persisted=persisted,
                 log_reason="precool_aborted",
@@ -194,7 +206,11 @@ def decide(inp: ClimateInputs) -> Action:
         persisted["precool_active"] = False
         return Action(
             kind=ActionKind.RESTORE,
-            target_high_f=originals["target_high_f"],
+            target_high_f=_clamp(
+                originals["target_high_f"],
+                inp.options["min_cool_f"],
+                inp.options["max_cool_f"],
+            ),
             preset=originals["preset"],
             next_persisted=persisted,
             log_reason="cold_start_abandon",
@@ -213,7 +229,11 @@ def decide(inp: ClimateInputs) -> Action:
             persisted["captured_originals"] = None
             return Action(
                 kind=ActionKind.RESTORE,
-                target_high_f=captured["target_high_f"],
+                target_high_f=_clamp(
+                    captured["target_high_f"],
+                    inp.options["min_cool_f"],
+                    inp.options["max_cool_f"],
+                ),
                 preset=captured["preset"],
                 next_persisted=persisted,
                 log_reason="hard_exit_temp_above_ceiling",
@@ -239,7 +259,11 @@ def decide(inp: ClimateInputs) -> Action:
         persisted["peak_hold_active"] = True
         return Action(
             kind=ActionKind.PEAK_HOLD_START,
-            target_high_f=inp.options["peak_max_temp_f"],
+            target_high_f=_clamp(
+                inp.options["peak_max_temp_f"],
+                inp.options["min_cool_f"],
+                inp.options["max_cool_f"],
+            ),
             next_persisted=persisted,
             log_reason="peak_hold_transition",
         )
@@ -251,7 +275,11 @@ def decide(inp: ClimateInputs) -> Action:
             "preset": inp.climate_preset,
             "captured_at": inp.ts.isoformat(),
         }
-        new_high = inp.climate_target_high_f - inp.options["precool_offset_f"]
+        new_high = _clamp(
+            inp.climate_target_high_f - inp.options["precool_offset_f"],
+            inp.options["min_cool_f"],
+            inp.options["max_cool_f"],
+        )
         persisted["captured_originals"] = captured
         persisted["precool_active"] = True
         persisted["precool_ran_this_cycle"] = True
