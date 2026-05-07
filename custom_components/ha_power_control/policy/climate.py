@@ -73,7 +73,8 @@ def _drift_detected(inp: ClimateInputs) -> bool:
         inp.climate_target_high_f is not None
         and abs(inp.climate_target_high_f - rec["target_high"]) > tol
     )
-    preset_drift = inp.climate_preset != rec.get("preset")
+    rec_preset = rec.get("preset")
+    preset_drift = rec_preset is not None and inp.climate_preset != rec_preset
     return high_drift or preset_drift
 
 
