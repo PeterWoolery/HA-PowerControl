@@ -1,13 +1,13 @@
 # HA Power Control — Session Handoff
 
 **Last updated:** 2026-05-07
-**Status:** P2 shipped (v0.2.0); ready for P3 planning once Delta 3 Max arrives.
+**Status:** P2 shipped (v0.2.0), merged to `main`. Ready for P3 planning once Delta 3 Max arrives.
 
 ---
 
 ## Where we are
 
-**v0.2.0** is tagged locally. P2 (climate controller — precool + peak-hold) is fully implemented on top of P1:
+**v0.2.0** is tagged on `main` (formerly `master` — branch renamed as of this session). P2 (climate controller — precool + peak-hold) is fully implemented on top of P1:
 
 - 110/110 tests passing, ≥85% line coverage, ruff clean
 - HACS-installable custom integration in `custom_components/ha_power_control/`
@@ -39,7 +39,7 @@
 
 3. **Trueup YAML schema** was extended beyond the spec: `nbc_state_per_kwh`, `nbc_export_per_kwh`, `nem_export_credit_per_kwh` (split from spec's single `nbc_per_kwh`). `RateTable` and `_parse` reflect this — see `rates_loader.py`.
 
-4. **Climate setpoint inversion safety:** P2 must ONLY manipulate `target_temp_high` (cooling threshold) on the `heat_cool` thermostat. NEVER touch `target_temp_low` — that would activate the furnace. This is enforced in the design spec §6.3 and must carry into P2 implementation.
+4. **Climate setpoint inversion safety (enforced):** `policy/climate_runner.py` writes ONLY `target_temp_high`. It explicitly passes `target_temp_low` through unchanged and NEVER modifies it. Any new climate-write code must follow the same rule — touching `target_temp_low` would activate the furnace.
 
 5. **`tests/conftest.py` strips an editable-install `PATH_PLACEHOLDER`** from `custom_components.__path__` before HA's loader runs. Don't remove this — `pytest-homeassistant-custom-component` chokes without it.
 
