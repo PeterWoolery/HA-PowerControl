@@ -3,7 +3,7 @@ name = "ha-power-control"
 version = "0.1.0"
 description = "Home Assistant integration for NEM 2.0 / E-TOU-D solar + battery + climate orchestration"
 requires-python = ">=3.12"
-authors = [{ name = "Peter", email = "peter@research.bike" }]
+authors = [{ name = "Peter" }]
 license = { text = "MIT" }
 dependencies = [
     "holidays>=0.50",

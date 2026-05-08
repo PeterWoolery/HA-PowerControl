@@ -13,6 +13,13 @@ dist/
 .adversarial-review/
 .agent/
 
+# Local secrets — never commit
+.env
+.env.*
+
+# Internal agent/planning docs — kept on disk, not tracked
+docs/HANDOFF.md
+
 # Personal bill PDFs — sanitized fixture lives in tests/fixtures/
 MarchBill.pdf
 *Bill*.pdf
